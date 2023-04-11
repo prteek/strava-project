@@ -1,3 +1,4 @@
+.gitignore
 *.swp
 package-lock.json
 __pycache__
@@ -8,3 +9,13 @@ __pycache__
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+/.idea/.gitignore
+/.idea/aws.xml
+/.idea/dataSources.xml
+/.idea/jupyter-settings.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/rGraphicsSettings.xml
+/.idea/rSettings.xml
+/.idea/strava-project.iml
+/.idea/vcs.xml
