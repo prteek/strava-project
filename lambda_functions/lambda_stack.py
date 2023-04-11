@@ -1,6 +1,5 @@
 import os
-import typing
-from aws_cdk import aws_lambda, aws_ecr, Duration, Stack
+from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
 
 
