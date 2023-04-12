@@ -3,23 +3,23 @@ import numpy as np
 import awswrangler as wr
 
 
-df_activities = (wr
-                  .athena
-                  .read_sql_query("SELECT * FROM activities",
-                                  database="strava")
-                  )
+df_activities = wr.athena.read_sql_query("SELECT * FROM activities", database="strava")
 
-df_activities_ = (df_activities
-                  .astype({"moving_time": float})
-                  .dropna(subset=['average_heartrate', 'moving_time', 'suffer_score'])
-                  .assign(moving_time_mins = lambda x: x.moving_time/60)
-                  )
+df_activities_ = (
+    df_activities.astype({"moving_time": float})
+    .dropna(subset=["average_heartrate", "moving_time", "suffer_score"])
+    .assign(moving_time_mins=lambda x: x.moving_time / 60)
+)
 
-marker_dict = {'Workout': "s", 'Run': "o", 'WeightTraining': "+", 'Walk': "x"}
+marker_dict = {"Workout": "s", "Run": "o", "WeightTraining": "+", "Walk": "x"}
 for marker, d in df_activities_.groupby("type"):
-    plt.scatter(d["average_heartrate"], np.log(d["suffer_score"]+0.5),
-                c=d["moving_time_mins"],
-                marker=marker_dict[marker], label=marker)
+    plt.scatter(
+        d["average_heartrate"],
+        np.log(d["suffer_score"] + 0.5),
+        c=d["moving_time_mins"],
+        marker=marker_dict[marker],
+        label=marker,
+    )
     plt.legend()
 
 

@@ -28,8 +28,8 @@ assert set(feature_type_mapping.keys()) == set(
 
 # We want more inputs like id compared to what model uses to make predictions for debugging etc.
 PREDICTORS = [
-                 "id",
-             ] + PREDICTORS_
+    "id",
+] + PREDICTORS_
 
 # What model uses to make predictions must be a subset of what we have as inputs
 assert set(PREDICTORS_) <= set(
@@ -80,10 +80,13 @@ def raise_missing_error(df: pd.DataFrame, columns: list):
     return df
 
 
-data_consistency_pipeline = Pipeline([("data_formatter", FT(format_input_data)),
-                                      ("no_null_check", FT(raise_missing_error))])
+data_consistency_pipeline = Pipeline(
+    [
+        ("data_formatter", FT(format_input_data)),
+        ("no_null_check", FT(raise_missing_error)),
+    ]
+)
 
-data_consistency_pipeline.set_params(no_null_check__kw_args={"columns": NO_NULL_FEATURES})
-
-
-
+data_consistency_pipeline.set_params(
+    no_null_check__kw_args={"columns": NO_NULL_FEATURES}
+)

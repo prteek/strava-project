@@ -46,20 +46,23 @@ def expected_error(y_true, y_pred):
     return float(np.mean(y_true - y_pred))
 
 
-preprocessing = Pipeline([('data_consistency', data_consistency_pipeline),
-                          ('scaler', StandardScaler()),
-                          ('feature_engineering', PolynomialFeatures(degree=2,
-                                                                     interaction_only=True,
-                                                                     include_bias=False)),
-                          ])
+preprocessing = Pipeline(
+    [
+        ("data_consistency", data_consistency_pipeline),
+        ("scaler", StandardScaler()),
+        (
+            "feature_engineering",
+            PolynomialFeatures(degree=2, interaction_only=True, include_bias=False),
+        ),
+    ]
+)
 
 estimator = PoissonRegressor(alpha=1)
-model = Pipeline([('preprocessing', preprocessing), ('estimator', estimator)])
+model = Pipeline([("preprocessing", preprocessing), ("estimator", estimator)])
 model.set_output(transform="pandas")
 
 # model.set_params(feature_engineering=None)
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model-dir",
@@ -98,4 +101,3 @@ if __name__ == "__main__":
 
     logger.info("Saving model")
     joblib.dump(model, os.path.join(model_dir, "model.joblib"))
-
