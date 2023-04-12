@@ -1,0 +1,56 @@
+- model: strava
+  sourcecode:
+    - 'train.py'
+    - 'prepare_training_data.py'
+    - 'helpers.py'
+
+  operations:
+    prepare-training-data:
+      description: Prepare training data from raw data
+      flags:
+        output-dir:
+          description: Location where datasets should be saved
+          type: string
+          default: "."
+
+      main: prepare_training_data
+
+
+    train:
+      description: Train the model
+      requires:
+        - operation: prepare-training-data
+      flags-import: no # To avoid warnings for missing Sagemaker related flags
+      flags:
+        model-dir:
+          description: Location where trained model must be saved
+          type: string
+          default: "."
+        train:
+          description: Location from where to read raw data
+          type: string
+          default: "."
+        sm-channel-train:
+          description: Used by Sagemaker (ignore)
+          type: string
+          default: "."
+          env-name: SM_CHANNEL_TRAIN
+
+      main: train
+
+
+    pipeline:
+      description: Runs training pipeline
+      flags:
+        train:
+          description: Location from where to read raw data
+          type: string
+          default: "."
+        model-dir:
+          description: Location where trained model must be saved
+          type: string
+          default: "."
+
+      steps:
+        - prepare-training-data output-dir=${train}
+        - train train=${train} model-dir=${model-dir}
