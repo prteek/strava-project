@@ -4,7 +4,7 @@ import boto3
 import argparse
 import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
-from sagemaker.estimator import Estimator
+from sagemaker.sklearn import SKLearn
 from sagemaker.serverless import ServerlessInferenceConfig
 from sagemaker.model import Model
 import time
@@ -162,11 +162,11 @@ if __name__ == "__main__":
     )
     local_dependencies = ["logger.py", "helpers.py"]
 
-    estimator = Estimator(
+    estimator = SKLearn(
         base_job_name="strava-training",
         role=role,
         entry_point="train.py",
-        image_uri=image_uri,
+        framework_version="1.0-1",
         instance_count=1,
         instance_type=train_instance_type,
         dependencies=local_dependencies,
