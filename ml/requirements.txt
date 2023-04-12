@@ -1,6 +1,33 @@
+##### Workflow
+guildai
+
+##### Dev
+black
+flake8
+
+##### Core scientific
 numpy
 pandas
 scipy
-scikit-learn
+
+##### Modelling
+scikit-learn>=1.2
+statsmodels
+joblib
+
+#### Visualisation
 matplotlib
+
+#### AWS
+boto3
+sagemaker
 awswrangler
+sagemaker-training
+sagemaker[local]
+
+#### Model serving
+sagemaker-inference
+
+#### Data
+fsspec
+s3fs

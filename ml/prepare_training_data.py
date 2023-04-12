@@ -1,9 +1,15 @@
+import sys
 import awswrangler as wr
 import boto3
 import os
 import argparse
+# Imports from local files
+sys.path.append(
+    "/opt/ml/processing/input"
+)  # To be able to read local files in container
 from helpers import QUERY_ACTIVITIES, PREDICTORS, TARGET, NO_NULL_FEATURES, format_input_data
 from logger import logger
+
 
 boto3_session = boto3.Session(region_name="eu-west-1")
 
@@ -14,6 +20,7 @@ if __name__ == "__main__":
         "--output-dir",
         type=str,
         help="Directory where training data should be saved",
+        default="/opt/ml/processing/output",
     )
 
     args, _ = parser.parse_known_args()
@@ -35,6 +42,8 @@ if __name__ == "__main__":
                      .pipe(format_input_data)
                      )
 
-    logger.info("Saving training data")
+    logger.info(f"Saving training data with shape {df_activities.shape}")
     df_activities.to_csv(os.path.join(output_dir, "train.csv"), index=False)
 
+
+#%%
