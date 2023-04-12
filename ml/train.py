@@ -59,8 +59,8 @@ preprocessing = Pipeline(
 
 estimator = PoissonRegressor(alpha=1)
 model = Pipeline([("preprocessing", preprocessing), ("estimator", estimator)])
-model.set_output(transform="pandas")
 
+# model.set_output(transform="pandas")
 # model.set_params(feature_engineering=None)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     model_dir = args.model_dir
 
     logger.info("Loading training data")
-    df_train = pd.read_csv(os.path.join(training_dir, "train.csv"), engine="pyarrow")
+    df_train = pd.read_csv(os.path.join(training_dir, "train.csv"))
 
     X = df_train[PREDICTORS_]
     y = df_train[TARGET]
