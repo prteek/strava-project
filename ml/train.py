@@ -1,4 +1,4 @@
-from helpers import QUERY_ACTIVITIES, data_consistency_pipeline, PREDICTORS_, TARGET
+from helpers import data_consistency_pipeline, PREDICTORS_, TARGET
 import argparse
 import joblib
 import pandas as pd
