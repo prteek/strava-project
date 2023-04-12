@@ -60,12 +60,10 @@ def check_predictors(df):
 def format_input_data(df_):
     """Format input data to pass clean version downstream
     Note: Don't try to do too much in this function"""
-    df = (
-        df_.copy()
-        .astype(feature_type_mapping)
-        .replace({"nan": np.nan})
-        .pipe(check_predictors)
-    )
+    df = (df_.copy()
+          .astype(feature_type_mapping)
+          .pipe(check_predictors)
+          )
 
     return df
 
