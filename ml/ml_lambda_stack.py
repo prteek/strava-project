@@ -11,7 +11,7 @@ class ModelDeployerStack(Stack):
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
             directory=os.path.join(os.getcwd(), "./ml"),
             cmd=["model_deployer.handler"],
-            file="lambda.Dockerfile",
+            file="ml.Dockerfile",
         )
 
         # Lambda Function
@@ -39,7 +39,7 @@ class PipelineOrchestrationStack(Stack):
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
             directory=os.path.join(os.getcwd(), "./ml"),
             cmd=["orchestrate.handler"],
-            file="lambda.Dockerfile",
+            file="ml.Dockerfile",
         )
 
         # Lambda Function
