@@ -1,6 +1,7 @@
 import os
 from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
+from aws_cdk import triggers
 
 ENV = os.environ["ENV"]
 
@@ -63,3 +64,9 @@ class PipelineOrchestrationStack(Stack):
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(60),
         )
+
+        # Trigger the function after it is deployed to orchestrate the pipeline
+        trigger = triggers.Trigger(self, "start_orchestration_pipeline",
+                                   handler=self.lam,
+                                   execute_on_handler_change=True,
+                                   )
