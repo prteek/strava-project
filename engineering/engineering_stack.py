@@ -9,7 +9,9 @@ class DataEngineeringStack(Stack):
 
         # Create new Container Image.
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
-            directory=os.path.join(os.getcwd(), "./engineering"), cmd=["fetch_data.handler"]
+            directory=os.path.join(os.getcwd(), "./engineering"),
+            cmd=["fetch_data.handler"],
+            file="engineering.Dockerfile",
         )
 
         # Lambda Function
@@ -21,12 +23,13 @@ class DataEngineeringStack(Stack):
             handler=aws_lambda.Handler.FROM_IMAGE,
             runtime=aws_lambda.Runtime.FROM_IMAGE,
             architecture=aws_lambda.Architecture.ARM_64,
-            environment={"STRAVA_CLIENT_ID": os.environ["STRAVA_CLIENT_ID"],
-                         "STRAVA_CLIENT_SECRET": os.environ["STRAVA_CLIENT_SECRET"],
-                         "STRAVA_ACCESS_TOKEN": os.environ["STRAVA_ACCESS_TOKEN"],
-                         "STRAVA_REFRESH_TOKEN": os.environ["STRAVA_REFRESH_TOKEN"],
-                         "EXPIRES_AT": os.environ["EXPIRES_AT"]
-                         },
+            environment={
+                "STRAVA_CLIENT_ID": os.environ["STRAVA_CLIENT_ID"],
+                "STRAVA_CLIENT_SECRET": os.environ["STRAVA_CLIENT_SECRET"],
+                "STRAVA_ACCESS_TOKEN": os.environ["STRAVA_ACCESS_TOKEN"],
+                "STRAVA_REFRESH_TOKEN": os.environ["STRAVA_REFRESH_TOKEN"],
+                "EXPIRES_AT": os.environ["EXPIRES_AT"],
+            },
             function_name="fetchStravaData",
             memory_size=256,
             reserved_concurrent_executions=2,

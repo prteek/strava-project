@@ -97,7 +97,7 @@ def handler(event, context=None):
 
     # athlete = client.get_athlete().to_dict()
     start_date = datetime.now() - timedelta(days=1)
-    start_date = datetime(2023,1,1)
+    start_date = datetime(2023, 1, 1)
     activities_response = client.get_activities(after=start_date.strftime("%Y-%m-%d"))
 
     activities = Clumper([a.to_dict() for a in activities_response])
@@ -113,7 +113,7 @@ def handler(event, context=None):
     df_streams = pd.concat(streams)
     df_activities = pd.DataFrame(activities.collect())
 
-    boto3_session = boto3.Session(region_name='eu-west-1')
+    boto3_session = boto3.Session(region_name="eu-west-1")
 
     wr.s3.to_csv(
         df=df_activities,
