@@ -30,7 +30,7 @@ class DataEngineeringStack(Stack):
                 "STRAVA_REFRESH_TOKEN": os.environ["STRAVA_REFRESH_TOKEN"],
                 "EXPIRES_AT": os.environ["EXPIRES_AT"],
             },
-            function_name="fetchStravaData",
+            function_name="strava_data_fetcher",
             memory_size=256,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(120),
