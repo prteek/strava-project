@@ -38,7 +38,7 @@ class PipelineOrchestrationStack(Stack):
         # Create new Container Image.
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
             directory=os.path.join(os.getcwd(), "./ml"),
-            cmd=["orchestrate.handler"],
+            cmd=["orchestrate_pipeline.handler"],
             file="ml.Dockerfile",
         )
 
