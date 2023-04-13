@@ -36,11 +36,11 @@ all: build-container tag-image push-image
 
 
 orchestrate-offline:
-	python3 orchestrate.py
+	python3 orchestrate_pipeline.py
 
 
 orchestrate:
-	python3 orchestrate.py --on-aws true
+	python3 orchestrate_pipeline.py --on-aws true
 
 
 format:

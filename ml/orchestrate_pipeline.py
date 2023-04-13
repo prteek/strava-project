@@ -193,7 +193,7 @@ if __name__ == "__main__":
     on_aws = args.on_aws
 
     pipeline = create_pipeline(on_aws=on_aws)
-    if not on_aws: # Halt script execution here if this is a test
+    if not on_aws:  # Halt script execution here if this is a test
         pipeline.upsert(role_arn=role, description='local pipeline execution')
         # Start a pipeline execution
         execution = pipeline.start()
