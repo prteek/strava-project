@@ -121,6 +121,7 @@ jobs:
 
   deploy-ml-stack:
     runs-on: ubuntu-latest
+    needs: [run-sagemaker-jobs-offline]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
