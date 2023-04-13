@@ -1,6 +1,8 @@
 import os
 import sys
+import json
 import argparse
+import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 from sagemaker.inputs import TrainingInput
 from sagemaker.sklearn import SKLearn
@@ -23,23 +25,13 @@ role = os.environ["SAGEMAKER_EXECUTION_ROLE"]
 
 def upload_code_helpers(filepath_list: list, bucket: str, prefix: str) -> str:
     for filepath in filepath_list:
-        _ = session.upload_data(filepath, bucket, key_prefix=prefix)
+        _ = sagemaker.Session().upload_data(filepath, bucket, key_prefix=prefix)
 
     return f"s3://{bucket}/{prefix}/"
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--on-aws",
-        action="store_true",
-        help="If the orchestration needs to be done on aws set this flag to true",
-        default=False,
-    )
-
-    args, _ = parser.parse_known_args()
-    on_aws = args.on_aws
+def create_pipeline(on_aws=False):
+    """Create a pipeline for training and deploying a model"""
 
     if on_aws:
         processor_instance_type = "ml.t3.medium"
@@ -129,25 +121,19 @@ if __name__ == "__main__":
     model_step_args = model.create(instance_type=train_instance_type)
 
     model_step = ModelStep(
-        name="create-model",
+        name="model-step",
         step_args=model_step_args,
         depends_on=[train_step],
     )
 
-    if not on_aws:  # Halt script execution here if this is a test
+    if not on_aws:
         # Define the pipeline in local mode and execute
         pipeline = Pipeline(name='local-pipeline',
                             steps=[fetch_data_step, train_step, model_step],
                             sagemaker_session=session)
 
-        # Create the pipeline
-        pipeline.upsert(role_arn=role, description='local pipeline execution')
+        return pipeline
 
-        # Start a pipeline execution
-        execution = pipeline.start()
-
-        print("Local orchestration test complete")
-        sys.exit(0)
     else:
 
         # ----- Deploy model ----- #
@@ -178,5 +164,41 @@ if __name__ == "__main__":
                             steps=[fetch_data_step, train_step, model_step, deploy_step],
                             sagemaker_session=session)
 
-        # Create the pipeline
+        return pipeline
+
+
+def handler(event, context=None):
+    """Lambda handler to create the pipeline on aws"""
+
+    pipeline = create_pipeline(on_aws=True)
+    pipeline.upsert(role_arn=role, description='Setup deployment pipeline')
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"message": "Pipeline orchestrated successfully"})
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--on-aws",
+        action="store_true",
+        help="If the orchestration needs to be done on aws set this flag to true",
+        default=False,
+    )
+
+    args, _ = parser.parse_known_args()
+    on_aws = args.on_aws
+
+    pipeline = create_pipeline(on_aws=on_aws)
+    if not on_aws: # Halt script execution here if this is a test
+        pipeline.upsert(role_arn=role, description='local pipeline execution')
+        # Start a pipeline execution
+        execution = pipeline.start()
+
+        print("Local orchestration test complete")
+        sys.exit(0)
+    else:
         pipeline.upsert(role_arn=role, description='Setup deployment pipeline')
