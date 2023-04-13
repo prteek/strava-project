@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from helpers import data_consistency_pipeline, PREDICTORS_, TARGET
 import argparse
 import joblib
