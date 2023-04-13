@@ -1,6 +1,6 @@
 - model: strava
   sourcecode:
-    - 'train.py'
+    - 'train_model.py'
     - 'prepare_training_data.py'
     - 'helpers.py'
     - 'logger.py'
@@ -36,7 +36,7 @@
           default: "."
           env-name: SM_CHANNEL_TRAIN
 
-      main: train
+      main: train_model
 
     pipeline:
       description: Runs training pipeline
