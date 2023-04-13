@@ -77,7 +77,7 @@ if __name__ == "__main__":
     )
 
     fetch_data_step = ProcessingStep(
-        name="ProcessDataForTraining",
+        name="fetch-data",
         processor=fetch_data,
         outputs=[
             ProcessingOutput(
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         sagemaker_session=session,
     )
 
-    train_step = TrainingStep(name='local_train',
+    train_step = TrainingStep(name='train-model',
                               estimator=estimator,
                               inputs={"train": TrainingInput(s3_data=train_data_location)},
                               depends_on=[fetch_data_step])
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     model_step_args = model.create(instance_type=train_instance_type)
 
     model_step = ModelStep(
-        name="CreateModel",
+        name="create-model",
         step_args=model_step_args,
         depends_on=[train_step],
     )
@@ -157,10 +157,11 @@ if __name__ == "__main__":
         max_concurrency = config.get("endpoint", "max-concurrency")
         endpoint_config_name = config.get("endpoint", "config-name")
         endpoint_name = config.get("endpoint", "name")
+        deployer_lambda_arn = config.get("aws", "deployer-lambda-arn")
 
-        deployer_lambda = Lambda("arn")
+        deployer_lambda = Lambda(deployer_lambda_arn)
         deploy_step = LambdaStep(
-            name="StravaModelDeploy",
+            name="deploy-model",
             lambda_func=deployer_lambda,
             inputs={
                 "model_name": model_name,

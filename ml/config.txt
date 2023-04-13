@@ -9,4 +9,5 @@ max-concurrency = 2
 
 [aws]
 bucket = pp-strava-data
+deployer-lambda-arn = arn:aws:lambda:eu-west-1:434616802091:function:deployStravaModel
 
