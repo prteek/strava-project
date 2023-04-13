@@ -67,19 +67,19 @@ class ModelAdapter:
             EndpointName=endpoint_name, EndpointConfigName=endpoint_config_name
         )
 
-        # wait for endpoint to reach a terminal state (InService) using describe endpoint
+        # # wait for endpoint to reach a terminal state (InService) using describe endpoint
         describe_endpoint_response = self.sm_client.describe_endpoint(
             EndpointName=endpoint_name
         )
-
-        while describe_endpoint_response["EndpointStatus"] == "Updating":
-            describe_endpoint_response = self.sm_client.describe_endpoint(
-                EndpointName=endpoint_name
-            )
-            print(
-                f"{describe_endpoint_response['EndpointStatus']} Endpoint: {endpoint_name}"
-            )
-            time.sleep(10)
+        #
+        # while describe_endpoint_response["EndpointStatus"] == "Updating":
+        #     describe_endpoint_response = self.sm_client.describe_endpoint(
+        #         EndpointName=endpoint_name
+        #     )
+        #     print(
+        #         f"{describe_endpoint_response['EndpointStatus']} Endpoint: {endpoint_name}"
+        #     )
+        #     time.sleep(10)
 
         return describe_endpoint_response
 
@@ -88,7 +88,7 @@ class ModelAdapter:
         return getattr(self.model, attr)
 
 
-def handler(event, context):
+def handler(event, context=None):
     """ Lambda handler to deploy a model to serverless endpoint"""
 
     model_name = event["model_name"]
