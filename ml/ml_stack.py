@@ -2,6 +2,11 @@ import os
 from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
 
+ENV = os.environ["ENV"]
+
+architecture_map = {"dev": aws_lambda.Architecture.ARM_64,
+                    "prod": aws_lambda.Architecture.X86_64}
+
 
 class ModelDeployerStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -22,7 +27,7 @@ class ModelDeployerStack(Stack):
             code=ecr_image,
             handler=aws_lambda.Handler.FROM_IMAGE,
             runtime=aws_lambda.Runtime.FROM_IMAGE,
-            architecture=aws_lambda.Architecture.ARM_64,
+            architecture=architecture_map[ENV],
             environment={"SAGEMAKER_EXECUTION_ROLE": os.environ["SAGEMAKER_EXECUTION_ROLE"]},
             function_name="strava_model_deployer",
             memory_size=128,
@@ -50,7 +55,7 @@ class PipelineOrchestrationStack(Stack):
             code=ecr_image,
             handler=aws_lambda.Handler.FROM_IMAGE,
             runtime=aws_lambda.Runtime.FROM_IMAGE,
-            architecture=aws_lambda.Architecture.ARM_64,
+            architecture=architecture_map[ENV],
             environment={"SAGEMAKER_EXECUTION_ROLE": os.environ["SAGEMAKER_EXECUTION_ROLE"],
                          "IMAGE_URI": os.environ["IMAGE_URI"]},
             function_name="strava_pipeline_orchestrator",

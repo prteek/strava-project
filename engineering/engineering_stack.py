@@ -2,6 +2,11 @@ import os
 from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
 
+ENV = os.environ["ENV"]
+
+architecture_map = {"dev": aws_lambda.Architecture.ARM_64,
+                    "prod": aws_lambda.Architecture.X86_64}
+
 
 class DataEngineeringStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -22,7 +27,7 @@ class DataEngineeringStack(Stack):
             code=ecr_image,
             handler=aws_lambda.Handler.FROM_IMAGE,
             runtime=aws_lambda.Runtime.FROM_IMAGE,
-            architecture=aws_lambda.Architecture.ARM_64,
+            architecture=architecture_map[ENV],
             environment={
                 "STRAVA_CLIENT_ID": os.environ["STRAVA_CLIENT_ID"],
                 "STRAVA_CLIENT_SECRET": os.environ["STRAVA_CLIENT_SECRET"],
