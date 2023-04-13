@@ -1,11 +1,11 @@
 [model]
-name = strava-v0-1
+name = strava-v0
 
 [endpoint]
-config-name = strava-v0-1
+config-name = strava-v0
 name = strava
 memory-size-in-mb = 1024
-max-concurrency = 5
+max-concurrency = 2
 
 [aws]
 bucket = pp-strava-data

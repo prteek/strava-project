@@ -4,22 +4,23 @@ import boto3
 import argparse
 import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
+from sagemaker.inputs import TrainingInput
 from sagemaker.sklearn import SKLearn
-from sagemaker.serverless import ServerlessInferenceConfig
 from sagemaker.model import Model
-import time
 import configparser
+from sagemaker.workflow.pipeline_context import LocalPipelineSession, PipelineSession
+from sagemaker.workflow.pipeline import Pipeline
+from sagemaker.workflow.steps import TrainingStep, ProcessingStep
+from sagemaker.workflow.model_step import ModelStep
+from sagemaker.workflow.lambda_step import (
+    LambdaStep,
+)
+from sagemaker.lambda_helper import Lambda
 from datetime import datetime
-
 
 config = configparser.ConfigParser()
 config.read("config.txt")
-region = os.environ["AWS_DEFAULT_REGION"]
 role = os.environ["SAGEMAKER_EXECUTION_ROLE"]
-
-boto3_session = boto3.Session(region_name=region)
-session = sagemaker.Session()
-sm_client = boto3.client("sagemaker", region_name=region)
 
 
 def upload_code_helpers(filepath_list: list, bucket: str, prefix: str) -> str:
@@ -27,83 +28,6 @@ def upload_code_helpers(filepath_list: list, bucket: str, prefix: str) -> str:
         _ = session.upload_data(filepath, bucket, key_prefix=prefix)
 
     return f"s3://{bucket}/{prefix}/"
-
-
-class ModelAdapter:
-    """
-    Adapter to add update_serverless_endpoint method to sagemaker Model class
-    """
-
-    def __init__(self, model: Model, sagemaker_client):
-        self.model = model
-        self.sm_client = sagemaker_client
-
-    def _create_serverless_epc(
-        self, endpoint_config_name: str, memory_size_in_mb: int, max_concurrency: int
-    ):
-        """Create a new End point config for serverless inference,
-         that uses current model. This config is created for each deployment update as
-        lineage tracking for endpoints"""
-
-        create_endpoint_config_response = self.sm_client.create_endpoint_config(
-            EndpointConfigName=endpoint_config_name,
-            ProductionVariants=[
-                {
-                    "ModelName": self.model.name,
-                    "VariantName": "AllTraffic",
-                    "ServerlessConfig": {
-                        "MemorySizeInMB": memory_size_in_mb,
-                        "MaxConcurrency": max_concurrency,
-                    },
-                }
-            ],
-        )
-
-        return create_endpoint_config_response
-
-    def update_serverless_endpoint(
-        self,
-        endpoint_name: str,
-        endpoint_config_base_name: str,
-        memory_size_in_mb: int = 1024,
-        max_concurrency: int = 5,
-    ):
-        """Update existing end point with a new model"""
-        endpoint_config_name = f"{endpoint_config_base_name}-{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}"
-        _ = self._create_serverless_epc(
-            endpoint_config_name, memory_size_in_mb, max_concurrency
-        )
-
-        _ = self.sm_client.update_endpoint(
-            EndpointName=endpoint_name, EndpointConfigName=endpoint_config_name
-        )
-
-        # wait for endpoint to reach a terminal state (InService) using describe endpoint
-        describe_endpoint_response = self.sm_client.describe_endpoint(
-            EndpointName=endpoint_name
-        )
-
-        while describe_endpoint_response["EndpointStatus"] == "Updating":
-            describe_endpoint_response = self.sm_client.describe_endpoint(
-                EndpointName=endpoint_name
-            )
-            print(
-                f"{describe_endpoint_response['EndpointStatus']} Endpoint: {endpoint_name}"
-            )
-            time.sleep(10)
-
-        return describe_endpoint_response
-
-    def __getattr__(self, attr):
-        """All non-adapted calls are passed to the object"""
-        return getattr(self.model, attr)
-
-
-def check_endpoint_exists(endpoint_name: str) -> bool:
-    """Check if an endpoint already exists"""
-    response_blob = sm_client.list_endpoints()
-    endpoint_names = [e["EndpointName"] for e in response_blob["Endpoints"]]
-    return endpoint_name in endpoint_names
 
 
 if __name__ == "__main__":
@@ -120,11 +44,13 @@ if __name__ == "__main__":
     on_aws = args.on_aws
 
     if on_aws:
-        processor_instance_type = "ml.m5.large"
+        processor_instance_type = "ml.t3.medium"
         train_instance_type = "ml.m5.large"
+        session = PipelineSession()
     else:
         processor_instance_type = "local"
         train_instance_type = "local"
+        session = LocalPipelineSession()
 
     bucket = config.get("aws", "bucket")
     image_uri = os.environ["IMAGE_URI"]
@@ -147,16 +73,24 @@ if __name__ == "__main__":
         command=["python3"],
         instance_count=1,
         instance_type=processor_instance_type,
+        sagemaker_session=session,
     )
 
-    fetch_data.run(
-        fetch_data_code_location,
+    fetch_data_step = ProcessingStep(
+        name="ProcessDataForTraining",
+        processor=fetch_data,
+        outputs=[
+            ProcessingOutput(
+                output_name="train",
+                destination=fetch_data_output,
+                source="/opt/ml/processing/output/",
+            )],
         inputs=[ProcessingInput(helpers, "/opt/ml/processing/input")],
-        outputs=[ProcessingOutput("/opt/ml/processing/output/", fetch_data_output)],
+        code=fetch_data_code_location,
     )
 
     # ----- Train model ----- #
-    train_data_location = fetch_data.latest_job.outputs[0].destination
+    train_data_location = fetch_data_output
     train_output_location = (
         f"s3://{bucket}/train/job-artefacts"  # Model artefacts will be uploaded here
     )
@@ -172,47 +106,78 @@ if __name__ == "__main__":
         dependencies=local_dependencies,
         code_location=train_output_location,
         output_path=train_output_location,
+        sagemaker_session=session,
     )
 
-    estimator.fit({"train": train_data_location})
+    train_step = TrainingStep(name='local_train',
+                              estimator=estimator,
+                              inputs={"train": TrainingInput(s3_data=train_data_location)},
+                              depends_on=[fetch_data_step])
+
+    # ----- Create model ----- #
+    model_name = f"{config.get('model', 'name')}-{datetime.now().strftime('%Y%m%d')}"
+    code_location = f"s3://{bucket}/train/Model"  # Code files will be uploaded here
+
+    model = Model(
+        image_uri=estimator.image_uri,
+        sagemaker_session=session,
+        role=role,
+        name=model_name,
+        entry_point="train.py",
+        code_location=code_location,
+        dependencies=local_dependencies,
+    )
+
+    model_step_args = model.create(instance_type=train_instance_type)
+
+    model_step = ModelStep(
+        name="CreateModel",
+        step_args=model_step_args,
+        depends_on=[train_step],
+    )
 
     if not on_aws:  # Halt script execution here if this is a test
+        # Define the pipeline in local mode and execute
+        pipeline = Pipeline(name='local-pipeline',
+                            steps=[fetch_data_step, train_step, model_step],
+                            sagemaker_session=session)
+
+        # Create the pipeline
+        pipeline.upsert(role_arn=role, description='local pipeline execution')
+
+        # Start a pipeline execution
+        execution = pipeline.start()
+
         print("Local orchestration test complete")
         sys.exit(0)
     else:
+
         # ----- Deploy model ----- #
-        model_name = config.get("model", "name")
+        memory_size_in_mb = config.get("endpoint", "memory-size-in-mb")
+        max_concurrency = config.get("endpoint", "max-concurrency")
         endpoint_config_name = config.get("endpoint", "config-name")
         endpoint_name = config.get("endpoint", "name")
-        code_location = f"s3://{bucket}/train/Model"  # Code files will be uploaded here
 
-        _model = Model(
-            image_uri=estimator.image_uri,
-            model_data=estimator.model_data,
-            sagemaker_session=session,
-            role=role,
-            name=model_name,
-            entry_point="train.py",
-            code_location=code_location,
-            dependencies=local_dependencies,
+        deployer_lambda = Lambda("arn")
+        deploy_step = LambdaStep(
+            name="StravaModelDeploy",
+            lambda_func=deployer_lambda,
+            inputs={
+                "model_name": model_name,
+                "endpoint_config_name": endpoint_config_name,
+                "endpoint_name": endpoint_name,
+                "image_uri": estimator.image_uri,
+                "role": role,
+                "memory_size_in_mb": memory_size_in_mb,
+                "max_concurrency": max_concurrency,
+            },
+            depends_on=[model_step],
         )
 
-        model = ModelAdapter(_model, sm_client)
-        model.create()
+        # Define the pipeline on aws but do not execute (since this process will be executed on a lambda)
+        pipeline = Pipeline(name='strava-ml-pipeline',
+                            steps=[fetch_data_step, train_step, model_step, deploy_step],
+                            sagemaker_session=session)
 
-        memory_size_in_mb = int(config.get("endpoint", "memory-size-in-mb"))
-        max_concurrency = int(config.get("endpoint", "max-concurrency"))
-
-        if check_endpoint_exists(endpoint_name):
-            model.update_serverless_endpoint(
-                endpoint_name=endpoint_name,
-                endpoint_config_base_name=endpoint_config_name,
-                memory_size_in_mb=memory_size_in_mb,
-                max_concurrency=max_concurrency,
-            )
-
-        else:  # Create a new endpoint
-            sic = ServerlessInferenceConfig(
-                memory_size_in_mb=memory_size_in_mb, max_concurrency=max_concurrency
-            )
-            model.deploy(endpoint_name=endpoint_name, serverless_inference_config=sic)
+        # Create the pipeline
+        pipeline.upsert(role_arn=role, description='Setup deployment pipeline')

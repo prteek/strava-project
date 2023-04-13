@@ -11,7 +11,9 @@
       "source.bat",
       "**/__init__.py",
       "python/__pycache__",
-      "tests"
+      "tests",
+      "**/__pycache__",
+      "**/data/*"
     ]
   }
 }
