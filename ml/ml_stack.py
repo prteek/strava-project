@@ -10,7 +10,7 @@ class ModelDeployerStack(Stack):
         # Create new Container Image.
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
             directory=os.path.join(os.getcwd(), "./ml"),
-            cmd=["model_deployer.handler"],
+            cmd=["deploy_model.handler"],
             file="ml.Dockerfile",
         )
 
@@ -24,7 +24,7 @@ class ModelDeployerStack(Stack):
             runtime=aws_lambda.Runtime.FROM_IMAGE,
             architecture=aws_lambda.Architecture.ARM_64,
             environment={"SAGEMAKER_EXECUTION_ROLE": os.environ["SAGEMAKER_EXECUTION_ROLE"]},
-            function_name="deployStravaModel",
+            function_name="strava_model_deployer",
             memory_size=128,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(60),
@@ -53,7 +53,7 @@ class PipelineOrchestrationStack(Stack):
             architecture=aws_lambda.Architecture.ARM_64,
             environment={"SAGEMAKER_EXECUTION_ROLE": os.environ["SAGEMAKER_EXECUTION_ROLE"],
                          "IMAGE_URI": os.environ["IMAGE_URI"]},
-            function_name="orchestrateStravaPipeline",
+            function_name="strava_pipeline_orchestrator",
             memory_size=128,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(60),
