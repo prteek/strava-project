@@ -49,15 +49,15 @@ def create_pipeline(on_aws=False):
         processing_local_dependencies, bucket, prefix="helpers"
     )
 
-    # ----- Fetch training data ----- #
-    fetch_data_code_location = session.upload_data(
-        "prepare_training_data.py", bucket=bucket, key_prefix="fetch-data/code"
+    # ----- Prepare training data ----- #
+    prepare_data_code_location = session.upload_data(
+        "prepare_training_data.py", bucket=bucket, key_prefix="prepare-training-data/code"
     )
 
-    fetch_data_output = f"s3://{bucket}/fetch-data/output/"
+    prepare_data_output = f"s3://{bucket}/prepare-training-data/output/"
 
-    fetch_data = ScriptProcessor(
-        base_job_name="fetch-data",
+    prepare_data = ScriptProcessor(
+        base_job_name="prepare-data",
         role=role,
         image_uri=image_uri,
         command=["python3"],
@@ -66,30 +66,30 @@ def create_pipeline(on_aws=False):
         sagemaker_session=session,
     )
 
-    fetch_data_step = ProcessingStep(
-        name="fetch-data",
-        processor=fetch_data,
+    prepare_data_step = ProcessingStep(
+        name="prepare-training-data",
+        processor=prepare_data,
         outputs=[
             ProcessingOutput(
                 output_name="train",
-                destination=fetch_data_output,
+                destination=prepare_data_output,
                 source="/opt/ml/processing/output/",
             )],
         inputs=[ProcessingInput(helpers, "/opt/ml/processing/input")],
-        code=fetch_data_code_location,
+        code=prepare_data_code_location,
     )
 
     # ----- Train model ----- #
-    train_data_location = fetch_data_output
+    train_data_location = prepare_data_output
     train_output_location = (
         f"s3://{bucket}/train/job-artefacts"  # Model artefacts will be uploaded here
     )
     local_dependencies = ["logger.py", "helpers.py"]
 
     estimator = SKLearn(
-        base_job_name="strava-training",
+        base_job_name="model-training",
         role=role,
-        entry_point="train.py",
+        entry_point="train_model.py",
         framework_version="1.0-1",
         instance_count=1,
         instance_type=train_instance_type,
@@ -102,7 +102,7 @@ def create_pipeline(on_aws=False):
     train_step = TrainingStep(name='train-model',
                               estimator=estimator,
                               inputs={"train": TrainingInput(s3_data=train_data_location)},
-                              depends_on=[fetch_data_step])
+                              depends_on=[prepare_data_step])
 
     # ----- Create model ----- #
     model_name = f"{config.get('model', 'name')}-{datetime.now().strftime('%Y%m%d')}"
@@ -113,7 +113,7 @@ def create_pipeline(on_aws=False):
         sagemaker_session=session,
         role=role,
         name=model_name,
-        entry_point="train.py",
+        entry_point="train_model.py",
         code_location=code_location,
         dependencies=local_dependencies,
     )
@@ -129,7 +129,7 @@ def create_pipeline(on_aws=False):
     if not on_aws:
         # Define the pipeline in local mode and execute
         pipeline = Pipeline(name='local-pipeline',
-                            steps=[fetch_data_step, train_step, model_step],
+                            steps=[prepare_data_step, train_step, model_step],
                             sagemaker_session=session)
 
         return pipeline
@@ -161,7 +161,7 @@ def create_pipeline(on_aws=False):
 
         # Define the pipeline on aws but do not execute (since this process will be executed on a lambda)
         pipeline = Pipeline(name='strava-ml-pipeline',
-                            steps=[fetch_data_step, train_step, model_step, deploy_step],
+                            steps=[prepare_data_step, train_step, model_step, deploy_step],
                             sagemaker_session=session)
 
         return pipeline
