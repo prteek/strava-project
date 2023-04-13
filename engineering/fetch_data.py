@@ -61,7 +61,7 @@ channels = [
 ]
 
 
-def fetch_data(event, context=None):
+def handler(event, context=None):
     client = Client()
 
     access_token = dict(

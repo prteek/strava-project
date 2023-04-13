@@ -3,13 +3,13 @@ from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
 
 
-class LambdaFunctionStack(Stack):
+class DataEngineeringStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # Create new Container Image.
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
-            directory=os.path.join(os.getcwd(), "./lambda_functions"), cmd=["lam.fetch_data"]
+            directory=os.path.join(os.getcwd(), "./engineering"), cmd=["fetch_data.handler"]
         )
 
         # Lambda Function
