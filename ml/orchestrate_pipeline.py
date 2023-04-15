@@ -110,6 +110,7 @@ def create_pipeline(on_aws=False):
 
     model = Model(
         image_uri=estimator.image_uri,
+        model_data=estimator.model_data,
         sagemaker_session=session,
         role=role,
         name=model_name,
@@ -118,7 +119,7 @@ def create_pipeline(on_aws=False):
         dependencies=local_dependencies,
     )
 
-    model_step_args = model.create(instance_type=train_instance_type)
+    model_step_args = model.create()
 
     model_step = ModelStep(
         name="model-step",
@@ -148,7 +149,7 @@ def create_pipeline(on_aws=False):
             name="deploy-model",
             lambda_func=deployer_lambda,
             inputs={
-                "model_name": model_name,
+                "model_name": model_step.properties.ModelName,
                 "endpoint_config_name": endpoint_config_name,
                 "endpoint_name": endpoint_name,
                 "image_uri": estimator.image_uri,
