@@ -110,7 +110,7 @@ def create_pipeline(on_aws=False):
 
     model = Model(
         image_uri=estimator.image_uri,
-        model_data=estimator.model_data,
+        model_data=train_step.properties.ModelArtifacts,
         sagemaker_session=session,
         role=role,
         name=model_name,
