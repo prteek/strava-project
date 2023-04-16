@@ -63,7 +63,8 @@ channels = [
 
 
 def handler(event, context=None):
-    client = Client()
+    strava_client = Client()
+    eventbridge_client = boto3.client('events')
 
     access_token = dict(
         access_token=STRAVA_ACCESS_TOKEN,
@@ -73,15 +74,15 @@ def handler(event, context=None):
 
     if time.time() > access_token["expires_at"]:
         print("Token has expired, will refresh")
-        refresh_response = client.refresh_access_token(
+        refresh_response = strava_client.refresh_access_token(
             client_id=STRAVA_CLIENT_ID,
             client_secret=STRAVA_CLIENT_SECRET,
             refresh_token=access_token["refresh_token"],
         )
 
-        client.access_token = refresh_response["access_token"]
-        client.refresh_token = refresh_response["refresh_token"]
-        client.token_expires_at = refresh_response["expires_at"]
+        strava_client.access_token = refresh_response["access_token"]
+        strava_client.refresh_token = refresh_response["refresh_token"]
+        strava_client.token_expires_at = refresh_response["expires_at"]
 
     else:
         print(
@@ -92,13 +93,13 @@ def handler(event, context=None):
                 )
             )
         )
-        client.access_token = access_token["access_token"]
-        client.refresh_token = access_token["refresh_token"]
-        client.token_expires_at = access_token["expires_at"]
+        strava_client.access_token = access_token["access_token"]
+        strava_client.refresh_token = access_token["refresh_token"]
+        strava_client.token_expires_at = access_token["expires_at"]
 
-    # athlete = client.get_athlete().to_dict()
+    athlete = strava_client.get_athlete().to_dict()
     start_date = datetime.now() - timedelta(days=1)
-    activities_response = client.get_activities(after=start_date.strftime("%Y-%m-%d"))
+    activities_response = strava_client.get_activities(after=start_date.strftime("%Y-%m-%d"))
     activities = Clumper([a.to_dict() for a in activities_response])
 
     if activities.shape[0] == 0:
@@ -108,7 +109,7 @@ def handler(event, context=None):
         activities = activities.select(*keep_activity_cols)
         streams = []
         for id_ in activities.select("id").collect():
-            activity_stream = client.get_activity_streams(id_["id"], types=channels)
+            activity_stream = strava_client.get_activity_streams(id_["id"], types=channels)
             if activity_stream is not None:
                 df_stream = stream_to_df(activity_stream).assign(activity_id=id_["id"])
                 streams.append(df_stream)
@@ -140,7 +141,20 @@ def handler(event, context=None):
             boto3_session=boto3_session,
         )
 
+        activity_ids = df_activities["id"].tolist()
+
+        # Send event to eventbridge
+        eventbridge_event = {
+            'Time': datetime.datetime.now(),
+            'Source': 'strava.activities',
+            'ActivityIds': json.dumps(activity_ids),
+            'AthleteId': athlete['id'],
+        }
+
+        # Send event to EventBridge
+        response = eventbridge_client.put_events(Entries=[eventbridge_event])
+
         return {
             "statusCode": 200,
-            "body": {"activity_ids": json.dumps(df_activities["id"].tolist())},
+            "body": {"ActivityIds": json.dumps(activity_ids)},
         }
