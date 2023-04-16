@@ -5,3 +5,4 @@ stravalib
 clumper
 awswrangler
 boto3
+sagemaker
