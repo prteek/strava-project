@@ -1,6 +1,8 @@
 import os
 from aws_cdk import aws_lambda, Duration, Stack
 from constructs import Construct
+from aws_cdk import aws_events, aws_events_targets
+
 
 ENV = os.environ["ENV"]
 
@@ -20,7 +22,7 @@ class DataEngineeringStack(Stack):
         )
 
         # Lambda Function
-        self.lam = aws_lambda.Function(
+        self.func = aws_lambda.Function(
             self,
             id="fetch_data_strava",
             description="Fetch data from Strava",
@@ -40,3 +42,14 @@ class DataEngineeringStack(Stack):
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(120),
         )
+
+        lambda_schedule = aws_events.Schedule.cron(hour="4", minute="0", year="*", month="*", day="*")
+        event_lambda_target = aws_events_targets.LambdaFunction(handler=self.func)
+        lambda_cw_event = aws_events.Rule(
+            self,
+            id="fetch_strava_data_rule",
+            description="The once per day CloudWatch event trigger for the Lambda",
+            enabled=True,
+            schedule=lambda_schedule,
+            targets=[event_lambda_target])
+

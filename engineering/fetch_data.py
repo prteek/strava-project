@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import pandas as pd
@@ -97,44 +98,49 @@ def handler(event, context=None):
 
     # athlete = client.get_athlete().to_dict()
     start_date = datetime.now() - timedelta(days=1)
-    start_date = datetime(2023, 1, 1)
     activities_response = client.get_activities(after=start_date.strftime("%Y-%m-%d"))
-
     activities = Clumper([a.to_dict() for a in activities_response])
-    activities = activities.select(*keep_activity_cols)
 
-    streams = []
-    for id_ in activities.select("id").collect():
-        activity_stream = client.get_activity_streams(id_["id"], types=channels)
-        if activity_stream is not None:
-            df_stream = stream_to_df(activity_stream).assign(activity_id=id_["id"])
-            streams.append(df_stream)
+    if activities.shape[0] == 0:
+        print("No activities found")
+        return {"statusCode": 200, "body": "No activities found"}
+    else:
+        activities = activities.select(*keep_activity_cols)
+        streams = []
+        for id_ in activities.select("id").collect():
+            activity_stream = client.get_activity_streams(id_["id"], types=channels)
+            if activity_stream is not None:
+                df_stream = stream_to_df(activity_stream).assign(activity_id=id_["id"])
+                streams.append(df_stream)
 
-    df_streams = pd.concat(streams)
-    df_activities = pd.DataFrame(activities.collect())
+        df_streams = pd.concat(streams)
+        df_activities = pd.DataFrame(activities.collect())
 
-    boto3_session = boto3.Session(region_name="eu-west-1")
+        boto3_session = boto3.Session(region_name="eu-west-1")
 
-    wr.s3.to_csv(
-        df=df_activities,
-        path="s3://pp-strava-data/activities/metadata",
-        index=False,
-        dataset=True,
-        mode="append",
-        database="strava",
-        table="activities",
-        boto3_session=boto3_session,
-    )
+        wr.s3.to_csv(
+            df=df_activities,
+            path="s3://pp-strava-data/activities/metadata",
+            index=False,
+            dataset=True,
+            mode="append",
+            database="strava",
+            table="activities",
+            boto3_session=boto3_session,
+        )
 
-    wr.s3.to_csv(
-        df=df_streams,
-        path="s3://pp-strava-data/activities/streams",
-        index=False,
-        dataset=True,
-        mode="append",
-        database="strava",
-        table="streams",
-        boto3_session=boto3_session,
-    )
+        wr.s3.to_csv(
+            df=df_streams,
+            path="s3://pp-strava-data/activities/streams",
+            index=False,
+            dataset=True,
+            mode="append",
+            database="strava",
+            table="streams",
+            boto3_session=boto3_session,
+        )
 
-    return {"statusCode": 200, "body": "Success"}
+        return {
+            "statusCode": 200,
+            "body": {"activity_ids": json.dumps(df_activities["id"].tolist())},
+        }
