@@ -117,7 +117,10 @@ def handler(event, context=None):
                 streams.append(df_stream)
 
         df_streams = pd.concat(streams)
-        df_activities = pd.DataFrame(activities.collect())
+        df_activities = (pd
+                         .DataFrame(activities.collect())
+                         .astype({"start_date": "datetime64[s]"})
+                         )
 
         wr.s3.to_csv(
             df=df_activities,

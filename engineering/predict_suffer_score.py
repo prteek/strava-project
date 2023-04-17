@@ -44,10 +44,13 @@ def handler(event, context=None):
         for i, activity_id in enumerate(activity_ids):
             i_result = {"activity_id": activity_id,
                         "predicted_suffer_score": y[i],
-                        "prediction_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                        "prediction_timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
             results_dump.append(i_result)
 
-        df_results = pd.DataFrame(results_dump)
+        df_results = (pd
+                      .DataFrame(results_dump)
+                      .astype({"prediction_timestamp": "datetime64[s]"})
+                      )
         wr.s3.to_csv(
             df=df_results,
             path="s3://pp-strava-data/activities/predicted_suffer_score",
