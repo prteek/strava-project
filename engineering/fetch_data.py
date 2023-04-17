@@ -72,7 +72,6 @@ boto3_session = boto3.Session(region_name="eu-west-1")
 
 
 def handler(event, context=None):
-
     if time.time() > access_token["expires_at"]:
         print("Token has expired, will refresh")
         refresh_response = strava_client.refresh_access_token(
@@ -101,7 +100,9 @@ def handler(event, context=None):
     athlete = strava_client.get_athlete().to_dict()
     start_date = datetime.now() - timedelta(days=1)
     # start_date = datetime(2023,1,1)
-    activities_response = strava_client.get_activities(after=start_date.strftime("%Y-%m-%d"))
+    activities_response = strava_client.get_activities(
+        after=start_date.strftime("%Y-%m-%d")
+    )
     activities = Clumper([a.to_dict() for a in activities_response])
 
     if activities.shape[0] == 0:
@@ -111,16 +112,17 @@ def handler(event, context=None):
         activities = activities.select(*keep_activity_cols)
         streams = []
         for id_ in activities.select("id").collect():
-            activity_stream = strava_client.get_activity_streams(id_["id"], types=channels)
+            activity_stream = strava_client.get_activity_streams(
+                id_["id"], types=channels
+            )
             if activity_stream is not None:
                 df_stream = stream_to_df(activity_stream).assign(activity_id=id_["id"])
                 streams.append(df_stream)
 
         df_streams = pd.concat(streams)
-        df_activities = (pd
-                         .DataFrame(activities.collect())
-                         .astype({"start_date": "datetime64[s]"})
-                         )
+        df_activities = pd.DataFrame(activities.collect()).astype(
+            {"start_date": "datetime64[s]"}
+        )
 
         wr.s3.to_csv(
             df=df_activities,
