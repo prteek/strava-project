@@ -15,6 +15,12 @@ STRAVA_ACCESS_TOKEN = os.environ["STRAVA_ACCESS_TOKEN"]
 STRAVA_REFRESH_TOKEN = os.environ["STRAVA_REFRESH_TOKEN"]
 EXPIRES_AT = os.environ["EXPIRES_AT"]
 
+access_token = dict(
+    access_token=STRAVA_ACCESS_TOKEN,
+    refresh_token=STRAVA_REFRESH_TOKEN,
+    expires_at=float(EXPIRES_AT),
+)
+
 
 def stream_to_df(stream):
     """Converts a stream to a dataframe"""
@@ -61,16 +67,11 @@ channels = [
     "watts",
 ]
 
+strava_client = Client()
+boto3_session = boto3.Session(region_name="eu-west-1")
+
 
 def handler(event, context=None):
-    strava_client = Client()
-    eventbridge_client = boto3.client('events')
-
-    access_token = dict(
-        access_token=STRAVA_ACCESS_TOKEN,
-        refresh_token=STRAVA_REFRESH_TOKEN,
-        expires_at=float(EXPIRES_AT),
-    )
 
     if time.time() > access_token["expires_at"]:
         print("Token has expired, will refresh")
@@ -99,6 +100,7 @@ def handler(event, context=None):
 
     athlete = strava_client.get_athlete().to_dict()
     start_date = datetime.now() - timedelta(days=1)
+    # start_date = datetime(2023,1,1)
     activities_response = strava_client.get_activities(after=start_date.strftime("%Y-%m-%d"))
     activities = Clumper([a.to_dict() for a in activities_response])
 
@@ -116,8 +118,6 @@ def handler(event, context=None):
 
         df_streams = pd.concat(streams)
         df_activities = pd.DataFrame(activities.collect())
-
-        boto3_session = boto3.Session(region_name="eu-west-1")
 
         wr.s3.to_csv(
             df=df_activities,
@@ -142,17 +142,6 @@ def handler(event, context=None):
         )
 
         activity_ids = df_activities["id"].tolist()
-
-        # Send event to eventbridge
-        eventbridge_event = {
-            'Time': datetime.datetime.now(),
-            'Source': 'strava.activities',
-            'ActivityIds': json.dumps(activity_ids),
-            'AthleteId': athlete['id'],
-        }
-
-        # Send event to EventBridge
-        response = eventbridge_client.put_events(Entries=[eventbridge_event])
 
         return {
             "statusCode": 200,
