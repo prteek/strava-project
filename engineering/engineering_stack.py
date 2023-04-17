@@ -33,9 +33,9 @@ class DataEngineeringStack(Stack):
                                                runtime=aws_lambda.Runtime.FROM_IMAGE,
                                                architecture=architecture_map[ENV],
                                                function_name="strava_suffer_score_predictor",
-                                               memory_size=128,
+                                               memory_size=256,
                                                reserved_concurrent_executions=2,
-                                               timeout=Duration.seconds(120)
+                                               timeout=Duration.seconds(180)
                                                )
 
         # Data Fetch Lambda
