@@ -21,7 +21,6 @@ boto3_session = boto3.Session(region_name="eu-west-1")
 
 
 def handler(event, context=None):
-    # TODO implement
     predictor = Predictor("strava", serializer=CSVSerializer())
     activity_ids = tuple(json.loads(event["body"]["ActivityIds"]))
     if len(activity_ids) == 0:
