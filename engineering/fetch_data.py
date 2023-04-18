@@ -98,8 +98,11 @@ def handler(event, context=None):
         strava_client.token_expires_at = access_token["expires_at"]
 
     athlete = strava_client.get_athlete().to_dict()
-    start_date = datetime.now() - timedelta(days=1)
-    # start_date = datetime(2023,1,1)
+    if not 'start_date' in event['body']:
+        start_date = datetime.now() - timedelta(days=1)
+    else:
+        start_date = datetime.strptime(event['body']['start_date'], '%Y-%m-%d')
+
     activities_response = strava_client.get_activities(
         after=start_date.strftime("%Y-%m-%d")
     )
@@ -107,7 +110,7 @@ def handler(event, context=None):
 
     if activities.shape[0] == 0:
         print("No activities found")
-        return {"statusCode": 200, "body": "No activities found"}
+        return {"statusCode": 200, "body": json.dumps([])}
     else:
         activities = activities.select(*keep_activity_cols)
         streams = []
@@ -146,9 +149,9 @@ def handler(event, context=None):
             boto3_session=boto3_session,
         )
 
-        activity_ids = df_activities["id"].tolist()
+        activity_ids = [{"activity_id": i} for i in df_activities["id"].tolist()]
 
         return {
             "statusCode": 200,
-            "body": {"ActivityIds": json.dumps(activity_ids)},
+            "body": json.dumps(activity_ids),
         }

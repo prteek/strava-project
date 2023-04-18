@@ -22,11 +22,12 @@ boto3_session = boto3.Session(region_name="eu-west-1")
 
 def handler(event, context=None):
     predictor = Predictor("strava", serializer=CSVSerializer())
-    activity_ids = tuple(json.loads(event["body"]["ActivityIds"]))
-    if len(activity_ids) == 0:
-        return {"statusCode": 200, "body": json.dumps("No activities to predict on")}
+    activity_id_list = json.loads(event["body"])
+    if len(activity_id_list) == 0:
+        return {"statusCode": 200, "body": json.dumps([])}
 
     else:
+        activity_ids = tuple([i['activity_id'] for i in activity_id_list])
         df_activities = wr.athena.read_sql_query(
             QUERY_ACTIVITY_IDS.format(activity_ids=activity_ids),
             database="strava",
