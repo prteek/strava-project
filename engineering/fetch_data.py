@@ -123,16 +123,20 @@ def handler(event, context=None):
                 streams.append(df_stream)
 
         df_streams = pd.concat(streams)
-        df_activities = pd.DataFrame(activities.collect()).astype(
-            {"start_date": "datetime64[s]"}
-        )
+        df_activities = (pd
+                        .DataFrame(activities.collect())
+                        .astype({"start_date": "datetime64[s]"})
+                        .rename(columns={"start_date": "start_timestamp"})
+                        .assign(start_date=lambda x: x["start_timestamp"].dt.date)
+                        )
 
         wr.s3.to_csv(
             df=df_activities,
             path="s3://pp-strava-data/activities/metadata",
             index=False,
             dataset=True,
-            mode="append",
+            mode="overwrite_partitions",
+            partition_cols=["start_date"],
             database="strava",
             table="activities",
             boto3_session=boto3_session,
@@ -143,7 +147,8 @@ def handler(event, context=None):
             path="s3://pp-strava-data/activities/streams",
             index=False,
             dataset=True,
-            mode="append",
+            mode="overwrite_partitions",
+            partition_cols=["activity_id"],
             database="strava",
             table="streams",
             boto3_session=boto3_session,
