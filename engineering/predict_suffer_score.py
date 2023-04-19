@@ -37,18 +37,12 @@ def handler(event, context=None):
         X = df_activities[PREDICTORS_].values
         y = eval(predictor.predict(X).decode())
 
-        results_dump = []
-        for i, activity_id in enumerate(activity_ids):
-            i_result = {
-                "activity_id": activity_id,
-                "predicted_suffer_score": y[i],
-                "prediction_timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            }
-            results_dump.append(i_result)
-
-        df_results = pd.DataFrame(results_dump).astype(
-            {"prediction_timestamp": "datetime64[s]"}
-        )
+        df_results = (df_activities
+                      .get(["id"])
+                      .rename(columns={"id": "activity_id"})
+                      .assign(predicted_suffer_score=y,
+                              prediction_timestamp=datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
+                      )
 
         wr.s3.to_csv(
             df=df_results,
@@ -62,4 +56,5 @@ def handler(event, context=None):
             boto3_session=boto3_session,
         )
 
+        results_dump = df_results.to_dict('records')
         return {"statusCode": 200, "body": json.dumps(results_dump)}
