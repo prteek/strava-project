@@ -27,9 +27,9 @@ def handler(event, context=None):
         return {"statusCode": 200, "body": json.dumps([])}
 
     else:
-        activity_ids = tuple([i['activity_id'] for i in activity_id_list])
+        activity_ids = [i['activity_id'] for i in activity_id_list]
         df_activities = wr.athena.read_sql_query(
-            QUERY_ACTIVITY_IDS.format(activity_ids=activity_ids),
+            QUERY_ACTIVITY_IDS.format(activity_ids=str(activity_ids).replace("[","(").replace("]",")")),
             database="strava",
             boto3_session=boto3_session,
         )
