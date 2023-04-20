@@ -62,7 +62,7 @@ class PipelineOrchestrationStack(Stack):
             function_name="strava_pipeline_orchestrator",
             memory_size=128,
             reserved_concurrent_executions=2,
-            timeout=Duration.seconds(60),
+            timeout=Duration.seconds(120),
         )
 
         if ENV == "prod":
