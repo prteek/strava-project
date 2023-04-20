@@ -98,8 +98,8 @@ def handler(event, context=None):
         strava_client.token_expires_at = access_token["expires_at"]
 
     athlete = strava_client.get_athlete().to_dict()
-    if (event is not None) and ('start_date' in event['body']):
-        start_date = datetime.strptime(event['body']['start_date'], '%Y-%m-%d')
+    if (event is not None) and ('start_date' in event):
+        start_date = datetime.strptime(event['start_date'], '%Y-%m-%d')
     else:
         start_date = datetime.now() - timedelta(days=1)
 
