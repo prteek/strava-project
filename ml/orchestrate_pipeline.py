@@ -1,7 +1,5 @@
 import os
-import sys
 import json
-import argparse
 import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 from sagemaker.inputs import TrainingInput
@@ -30,17 +28,12 @@ def upload_code_helpers(filepath_list: list, bucket: str, prefix: str) -> str:
     return f"s3://{bucket}/{prefix}/"
 
 
-def create_pipeline(on_aws=False):
+def create_pipeline():
     """Create a pipeline for training and deploying a model"""
 
-    if on_aws:
-        processor_instance_type = "ml.t3.medium"
-        train_instance_type = "ml.m5.large"
-        session = PipelineSession()
-    else:
-        processor_instance_type = "local"
-        train_instance_type = "local"
-        session = LocalPipelineSession()
+    processor_instance_type = "ml.t3.medium"
+    train_instance_type = "ml.m5.large"
+    session = PipelineSession()
 
     bucket = config.get("aws", "bucket")
     image_uri = os.environ["IMAGE_URI"]
@@ -127,51 +120,41 @@ def create_pipeline(on_aws=False):
         depends_on=[train_step],
     )
 
-    if not on_aws:
-        # Define the pipeline in local mode and execute
-        pipeline = Pipeline(name='local-pipeline',
-                            steps=[prepare_data_step, train_step, model_step],
-                            sagemaker_session=session)
+    # ----- Deploy model ----- #
+    memory_size_in_mb = config.get("endpoint", "memory-size-in-mb")
+    max_concurrency = config.get("endpoint", "max-concurrency")
+    endpoint_config_name = config.get("endpoint", "config-name")
+    endpoint_name = config.get("endpoint", "name")
+    deployer_lambda_arn = config.get("aws", "deployer-lambda-arn")
 
-        return pipeline
+    deployer_lambda = Lambda(deployer_lambda_arn)
+    deploy_step = LambdaStep(
+        name="deploy-model",
+        lambda_func=deployer_lambda,
+        inputs={
+            "model_name": model_step.properties.ModelName,
+            "endpoint_config_name": endpoint_config_name,
+            "endpoint_name": endpoint_name,
+            "image_uri": estimator.image_uri,
+            "role": role,
+            "memory_size_in_mb": memory_size_in_mb,
+            "max_concurrency": max_concurrency,
+        },
+        depends_on=[model_step],
+    )
 
-    else:
+    # Define the pipeline on aws but do not execute (since this process will be executed on a lambda)
+    pipeline = Pipeline(name='strava-ml-pipeline',
+                        steps=[prepare_data_step, train_step, model_step, deploy_step],
+                        sagemaker_session=session)
 
-        # ----- Deploy model ----- #
-        memory_size_in_mb = config.get("endpoint", "memory-size-in-mb")
-        max_concurrency = config.get("endpoint", "max-concurrency")
-        endpoint_config_name = config.get("endpoint", "config-name")
-        endpoint_name = config.get("endpoint", "name")
-        deployer_lambda_arn = config.get("aws", "deployer-lambda-arn")
-
-        deployer_lambda = Lambda(deployer_lambda_arn)
-        deploy_step = LambdaStep(
-            name="deploy-model",
-            lambda_func=deployer_lambda,
-            inputs={
-                "model_name": model_step.properties.ModelName,
-                "endpoint_config_name": endpoint_config_name,
-                "endpoint_name": endpoint_name,
-                "image_uri": estimator.image_uri,
-                "role": role,
-                "memory_size_in_mb": memory_size_in_mb,
-                "max_concurrency": max_concurrency,
-            },
-            depends_on=[model_step],
-        )
-
-        # Define the pipeline on aws but do not execute (since this process will be executed on a lambda)
-        pipeline = Pipeline(name='strava-ml-pipeline',
-                            steps=[prepare_data_step, train_step, model_step, deploy_step],
-                            sagemaker_session=session)
-
-        return pipeline
+    return pipeline
 
 
 def handler(event, context=None):
     """Lambda handler to create the pipeline on aws"""
 
-    pipeline = create_pipeline(on_aws=True)
+    pipeline = create_pipeline()
     pipeline.upsert(role_arn=role, description='Setup deployment pipeline')
 
     return {
@@ -181,25 +164,17 @@ def handler(event, context=None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--on-aws",
-        action="store_true",
-        help="If the orchestration needs to be done on aws set this flag to true",
-        default=False,
-    )
+    pipeline = create_pipeline()
+    local_compatible_steps = [v for k,v in pipeline._step_map.items()
+                              if k not in ("deploy-model", 'model-step-CreateModel')]
 
-    args, _ = parser.parse_known_args()
-    on_aws = args.on_aws
+    local_pipeline = Pipeline(name="local_pipeline",
+                              steps=local_compatible_steps,
+                              sagemaker_session=LocalPipelineSession())
 
-    pipeline = create_pipeline(on_aws=on_aws)
-    if not on_aws:  # Halt script execution here if this is a test
-        pipeline.upsert(role_arn=role, description='local pipeline execution')
-        # Start a pipeline execution
-        execution = pipeline.start()
-
-        print("Local orchestration test complete")
-        sys.exit(0)
-    else:
-        pipeline.upsert(role_arn=role, description='Setup deployment pipeline')
+    local_pipeline.upsert(role_arn=role,
+                          description='local pipeline execution')
+    # Start a pipeline execution
+    execution = local_pipeline.start()
+    print("Local orchestration test complete")
