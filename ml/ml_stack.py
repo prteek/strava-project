@@ -1,12 +1,15 @@
 import os
-from aws_cdk import aws_lambda, Duration, Stack
+from aws_cdk import aws_lambda, Duration, Stack, triggers, aws_iam
 from constructs import Construct
-from aws_cdk import triggers
 
 ENV = os.environ["ENV"]
 
 architecture_map = {"dev": aws_lambda.Architecture.ARM_64,
                     "prod": aws_lambda.Architecture.X86_64}
+
+sagemaker_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSageMakerFullAccess")
+s3_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+lambda_exec_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AWSLambdaExecute")
 
 
 class ModelDeployerStack(Stack):
@@ -20,8 +23,13 @@ class ModelDeployerStack(Stack):
             file="ml.Dockerfile",
         )
 
+        role = aws_iam.Role(self, "strava_deployer_role",
+                            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                            managed_policies=[lambda_exec_policy, sagemaker_full_access_policy]
+                            )
+
         # Lambda Function
-        self.lam = aws_lambda.Function(
+        deployer_lambda = aws_lambda.Function(
             self,
             id="strava_model_deployer",
             description="Deploy Strava model to serverless endpoint",
@@ -34,6 +42,7 @@ class ModelDeployerStack(Stack):
             memory_size=128,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(60),
+            role=role
         )
 
 
@@ -48,8 +57,16 @@ class PipelineOrchestrationStack(Stack):
             file="ml.Dockerfile",
         )
 
+        role = aws_iam.Role(self, "strava_pipeline_orchestration_role",
+                            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                            managed_policies=[lambda_exec_policy,
+                                              sagemaker_full_access_policy,
+                                              s3_full_access_policy
+                                              ]
+                            )
+
         # Lambda Function
-        self.lam = aws_lambda.Function(
+        orchestration_lambda = aws_lambda.Function(
             self,
             id="strava_pipeline_orchestrator",
             description="Orchestrate Strava ml pipeline on Sagemaker",
@@ -63,6 +80,7 @@ class PipelineOrchestrationStack(Stack):
             memory_size=128,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(120),
+            role=role,
         )
 
         if ENV == "prod":

@@ -6,12 +6,21 @@ from aws_cdk import (aws_lambda,
                      aws_events,
                      aws_events_targets,
                      aws_lambda_destinations,
+                     aws_iam
                      )
 
 ENV = os.environ["ENV"]
 
 architecture_map = {"dev": aws_lambda.Architecture.ARM_64,
                     "prod": aws_lambda.Architecture.X86_64}
+
+
+lambda_exec_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AWSLambdaExecute")
+sagemaker_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSageMakerFullAccess")
+s3_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+athena_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonAthenaFullAccess")
+event_bridge_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEventBridgeFullAccess")
+glue_full_access_policy = aws_iam.ManagedPolicy.from_aws_managed_policy_name("AWSGlueConsoleFullAccess")
 
 
 class DataEngineeringStack(Stack):
@@ -25,6 +34,16 @@ class DataEngineeringStack(Stack):
             file="engineering.Dockerfile",
         )
 
+        role = aws_iam.Role(self, "strava_predictor_lambda_role",
+                            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                            managed_policies=[lambda_exec_policy,
+                                              s3_full_access_policy,
+                                              athena_full_access_policy,
+                                              sagemaker_full_access_policy,
+                                              glue_full_access_policy,
+                                              ]
+                            )
+
         predictor_lambda = aws_lambda.Function(self,
                                                id="strava_predict_suffer_score",
                                                description="Make predictions on fetched data from Strava",
@@ -35,7 +54,8 @@ class DataEngineeringStack(Stack):
                                                function_name="strava_suffer_score_predictor",
                                                memory_size=256,
                                                reserved_concurrent_executions=2,
-                                               timeout=Duration.seconds(180)
+                                               timeout=Duration.seconds(180),
+                                               role=role,
                                                )
 
         # Data Fetch Lambda
@@ -44,6 +64,16 @@ class DataEngineeringStack(Stack):
             cmd=["fetch_data.handler"],
             file="engineering.Dockerfile",
         )
+
+        role = aws_iam.Role(self, "strava_fetch_data_lambda_role",
+                            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                            managed_policies=[lambda_exec_policy,
+                                              s3_full_access_policy,
+                                              athena_full_access_policy,
+                                              event_bridge_full_access_policy,
+                                              glue_full_access_policy,
+                                             ]
+                            )
 
         data_fetch_lambda = aws_lambda.Function(
             self,
@@ -66,6 +96,7 @@ class DataEngineeringStack(Stack):
             timeout=Duration.seconds(120),
             on_success=aws_lambda_destinations.LambdaDestination(predictor_lambda,
                                                                  response_only=True),
+            role=role
         )
 
         lambda_schedule = aws_events.Schedule.cron(hour="4", minute="0", year="*", month="*", day="*")
