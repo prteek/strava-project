@@ -86,7 +86,7 @@ class PipelineOrchestrationStack(Stack):
         if ENV == "prod":
             # Trigger the function after it is deployed to orchestrate the pipeline
             trigger = triggers.Trigger(self, "start_orchestration_pipeline",
-                                       handler=self.lam,
+                                       handler=orchestration_lambda,
                                        execute_on_handler_change=True,
                                        )
         else:
