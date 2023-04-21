@@ -8,8 +8,7 @@ help:
 	@echo " - push-image     	: Push latest tagged image to ECR"
 	@echo " - all			    : build-tag-push"
 	@echo " - run-container 	: Run the last built image interactively"
-	@echo " - orchestrate-offline	: orchestrate sagemaker pipeline in offline mode and run it as a test"
-	@echo " - orchestrate		: orchestrate sagemaker pipeline on AWS"
+	@echo " - orchestrate		: orchestrate sagemaker pipeline in offline mode and run it as a test"
 
 
 create-ecr-repo:
@@ -35,12 +34,8 @@ push-image:
 all: build-container tag-image push-image
 
 
-orchestrate-offline:
-	python3 orchestrate_pipeline.py
-
-
 orchestrate:
-	python3 orchestrate_pipeline.py --on-aws true
+	python3 orchestrate_pipeline.py
 
 
 format:
