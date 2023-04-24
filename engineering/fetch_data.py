@@ -26,7 +26,7 @@ def stream_to_df(stream):
     """Converts a stream to a dataframe"""
     df_stream = pd.DataFrame()
     for k, v_ in stream.items():
-        v = v_.to_dict()["data"]
+        v = v_.dict()["data"]
         if k == "latlng":
             df_stream["lat"] = [x[0] for x in v]
             df_stream["lng"] = [x[1] for x in v]
@@ -120,7 +120,7 @@ def handler(event, context=None):
     activities_response = strava_client.get_activities(
         after=start_date.strftime("%Y-%m-%d")
     )
-    activities = Clumper([a.to_dict() for a in activities_response])
+    activities = Clumper([a.dict() for a in activities_response])
 
     if activities.shape[0] == 0:
         print("No activities found")
@@ -140,13 +140,13 @@ def handler(event, context=None):
         # This ensures that irrespective of Workout type all required columns exist
         # to be able to add data to table safely
         df_streams = (pd
-                      .DataFrame(columns=stream_columns_to_save)
-                      .append(pd.concat(streams))
+                      .concat([pd.DataFrame(columns=stream_columns_to_save),
+                               pd.concat(streams)]
+                              )
                       )
 
         df_activities = (pd
                         .DataFrame(activities.collect())
-                        .astype({"start_date": "datetime64[s]"})
                         .rename(columns={"start_date": "start_timestamp"})
                         .assign(start_date=lambda x: x["start_timestamp"].dt.date)
                         )
