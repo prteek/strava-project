@@ -67,6 +67,20 @@ channels = [
     "watts",
 ]
 
+stream_columns_to_save = ["moving",
+                           "grade_smooth",
+                           "heartrate",
+                           "time",
+                           "velocity_smooth",
+                           "watts",
+                           "lat",
+                           "lng",
+                           "cadence",
+                           "distance",
+                           "altitude",
+                           "activity_id"]
+
+
 strava_client = Client()
 boto3_session = boto3.Session(region_name="eu-west-1")
 
@@ -122,7 +136,14 @@ def handler(event, context=None):
                 df_stream = stream_to_df(activity_stream).assign(activity_id=id_["id"])
                 streams.append(df_stream)
 
-        df_streams = pd.concat(streams)
+        # Create an empty dataframe with required columns then append stream data to it
+        # This ensures that irrespective of Workout type all required columns exist
+        # to be able to add data to table safely
+        df_streams = (pd
+                      .DataFrame(columns=stream_columns_to_save)
+                      .append(pd.concat(streams))
+                      )
+
         df_activities = (pd
                         .DataFrame(activities.collect())
                         .astype({"start_date": "datetime64[s]"})
