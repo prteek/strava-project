@@ -5,7 +5,7 @@ name = strava-v0
 config-name = strava-v0
 name = strava
 memory-size-in-mb = 1024
-max-concurrency = 2
+max-concurrency = 10
 
 [aws]
 bucket = pp-strava-data
