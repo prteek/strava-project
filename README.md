@@ -1,3 +1,4 @@
+[![Strava Engineering and ML deployment](https://github.com/prteek/strava-project/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/prteek/strava-project/actions/workflows/ci-cd.yml)  
 
 # Strava activities modelling
 
