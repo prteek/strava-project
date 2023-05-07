@@ -1,3 +1,5 @@
+ECR_REPO=$(shell git config --file config.txt --get $(ENV).ecr-repo)
+IMAGE_URI=$(shell git config --file config.txt --get $(ENV).image-uri)
 IMAGE=$(ECR_REPO):latest
 IMAGE_ID=$(shell docker images -q $(IMAGE))
 
@@ -8,7 +10,6 @@ help:
 	@echo " - push-image     	: Push latest tagged image to ECR"
 	@echo " - all			    : build-tag-push"
 	@echo " - run-container 	: Run the last built image interactively"
-	@echo " - orchestrate		: orchestrate sagemaker pipeline in offline mode and run it as a test"
 
 
 create-ecr-repo:
@@ -33,15 +34,3 @@ push-image:
 
 all: build-container tag-image push-image
 
-
-orchestrate:
-	python3 orchestrate_pipeline.py
-
-
-format:
-	black *.py
-
-
-clean:
-	rm -rf __pycache__/
-	rm -rf .ipynb_checkpoints/
