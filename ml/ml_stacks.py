@@ -90,7 +90,7 @@ class StravaTrainProdPipelineStack(Stack):
 
         rule = aws_events.Rule(
             self, "trigger_avm_training_pipeline_rule",
-            schedule=aws_events.Schedule.rate(Duration.days(7)),
+            schedule=aws_events.Schedule.rate(Duration.days(30)),
             targets=[aws_events_targets.LambdaFunction(lambdaFn)],
             enabled=True,
         )
