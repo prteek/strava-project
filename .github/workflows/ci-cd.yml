@@ -74,7 +74,7 @@ jobs:
       - name: Run sagemaker jobs offline
         run: |
           cd ./ml
-          make orchestrate
+          python orchestrate_pipeline.py --execute-local-instance True
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -144,7 +144,9 @@ jobs:
 
       - name: Deploy ml stacks
         run: |
-          cd ./ml; python orchestrate_pipeline.py --execute-local-instance False; cd ..
+          cd ./ml
+          python orchestrate_pipeline.py --execute-local-instance False
+          cd ..
           cdk deploy ModelDeployerStack --require-approval=never
           cdk deploy PipelineOrchestrationStack --require-approval=never
 
