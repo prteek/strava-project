@@ -155,7 +155,7 @@ jobs:
         run: |
           python orchestrate_pipeline.py --execute-local-instance False
           cdk deploy ModelDeployerStack --require-approval=never
-          cdk deploy PipelineOrchestrationStack --require-approval=never
+          cdk deploy StravaTrainProdPipelineStack --require-approval=never
 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
