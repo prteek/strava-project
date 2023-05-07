@@ -15,6 +15,8 @@ from sagemaker.workflow.lambda_step import (
 )
 from sagemaker.lambda_helper import Lambda
 from datetime import datetime
+import argparse
+import distutils
 
 config = configparser.ConfigParser()
 config.read("config.txt")
@@ -163,18 +165,40 @@ def handler(event, context=None):
     }
 
 
+def save_pipeline_definition(pipeline: Pipeline, save_dir):
+    """Write pipeline definition to a file"""
+    pipeline_definition = pipeline.definition()
+    file_path = os.path.join(save_dir, "training_pipeline_definition.json")
+    with open(file_path, "w") as f:
+        f.write(pipeline_definition)
+
+
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--execute-local-instance",
+        type=distutils.util.strtobool,
+        help="If needed pipeline instance can be run locally for a check by setting this flag to True",
+        default=True,
+    )
+
+    args, _ = parser.parse_known_args()
+    execute_local_instance = args.execute_local_instance
+
     pipeline = create_pipeline()
-    local_compatible_steps = [v for k,v in pipeline._step_map.items()
-                              if k not in ("deploy-model", 'model-step-CreateModel')]
+    save_pipeline_definition(pipeline, save_dir=".")
 
-    local_pipeline = Pipeline(name="local_pipeline",
-                              steps=local_compatible_steps,
-                              sagemaker_session=LocalPipelineSession())
+    if execute_local_instance:
+        local_compatible_steps = [v for k,v in pipeline._step_map.items()
+                                  if k not in ("deploy-model", 'model-step-CreateModel')]
 
-    local_pipeline.upsert(role_arn=role,
-                          description='local pipeline execution')
-    # Start a pipeline execution
-    execution = local_pipeline.start()
-    print("Local orchestration test complete")
+        local_pipeline = Pipeline(name="local_pipeline",
+                                  steps=local_compatible_steps,
+                                  sagemaker_session=LocalPipelineSession())
+
+        local_pipeline.upsert(role_arn=role,
+                              description='local pipeline execution')
+        # Start a pipeline execution
+        execution = local_pipeline.start()
+        print("Local orchestration test complete")
