@@ -18,7 +18,7 @@ class ModelDeployerStack(Stack):
 
         # Create new Container Image.
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
-            directory=os.path.join(os.getcwd(), "./ml"),
+            directory=os.getcwd(),
             cmd=["deploy_model.handler"],
             file="ml.Dockerfile",
         )
@@ -50,7 +50,7 @@ class StravaTrainProdPipelineStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        with open("./ml/training_pipeline_definition.json", encoding="utf8") as fp:
+        with open("./training_pipeline_definition.json", encoding="utf8") as fp:
             pipeline_definition = fp.read()
 
         cfn_pipeline = sm.CfnPipeline(self,
@@ -68,7 +68,7 @@ class StravaTrainProdPipelineStack(Stack):
 
         # Invocation schedule lambda
 
-        with open("./ml/invoke_pipeline_lambda.py", encoding="utf8") as fp:
+        with open("./invoke_pipeline_lambda.py", encoding="utf8") as fp:
             handler_code = fp.read()
 
         role = aws_iam.Role(self, "strava_training_pipeline_invoke_role",

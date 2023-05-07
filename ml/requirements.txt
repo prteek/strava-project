@@ -24,6 +24,8 @@ sagemaker
 awswrangler
 sagemaker-training
 sagemaker[local]
+aws-cdk-lib==2.73.0
+constructs>=10.0.0
 
 #### Model serving
 sagemaker-inference

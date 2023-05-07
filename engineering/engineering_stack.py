@@ -29,7 +29,7 @@ class DataEngineeringStack(Stack):
 
         # Predictor Lambda
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
-            directory=os.path.join(os.getcwd(), "./engineering"),
+            directory=os.getcwd(),
             cmd=["predict_suffer_score.handler"],
             file="engineering.Dockerfile",
         )
@@ -60,7 +60,7 @@ class DataEngineeringStack(Stack):
 
         # Data Fetch Lambda
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
-            directory=os.path.join(os.getcwd(), "./engineering"),
+            directory=os.getcwd(),
             cmd=["fetch_data.handler"],
             file="engineering.Dockerfile",
         )

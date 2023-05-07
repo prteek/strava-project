@@ -6,3 +6,5 @@ clumper
 awswrangler
 boto3
 sagemaker
+aws-cdk-lib==2.73.0
+constructs>=10.0.0
