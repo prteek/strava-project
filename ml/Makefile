@@ -1,5 +1,5 @@
-ECR_REPO=$(shell git config --file config.txt --get $(ENV).ecr-repo)
-IMAGE_URI=$(shell git config --file config.txt --get $(ENV).image-uri)
+ECR_REPO=$(shell git config --file config.txt --get aws.ecr-repo)
+IMAGE_URI=$(shell git config --file config.txt --get aws.image-uri)
 IMAGE=$(ECR_REPO):latest
 IMAGE_ID=$(shell docker images -q $(IMAGE))
 
