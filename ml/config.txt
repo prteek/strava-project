@@ -10,4 +10,5 @@ max-concurrency = 10
 [aws]
 bucket = pp-strava-data
 deployer-lambda-arn = arn:aws:lambda:eu-west-1:434616802091:function:strava_model_deployer
-
+ecr-repo = strava
+image-uri = 434616802091.dkr.ecr.eu-west-1.amazonaws.com/strava:latest
