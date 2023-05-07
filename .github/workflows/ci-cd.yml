@@ -100,6 +100,7 @@ jobs:
       - name: Install CDK and Python dependencies
         run: |
           npm install -g aws-cdk
+          cd ./engineering
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
@@ -140,6 +141,7 @@ jobs:
       - name: Install CDK and Python dependencies
         run: |
           npm install -g aws-cdk
+          cd ./ml
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
