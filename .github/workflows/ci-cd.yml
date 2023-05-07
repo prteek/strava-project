@@ -57,7 +57,7 @@ jobs:
 
   run-sagemaker-jobs-offline:
     runs-on: ubuntu-latest
-    needs: [check-training-pipeline, deploy-docker]
+    needs: [check-training-pipeline, deploy-training-docker]
 
     steps:
       - uses: actions/checkout@v3
