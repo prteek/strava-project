@@ -78,6 +78,7 @@ jobs:
       - name: Run sagemaker jobs offline
         run: |
           python orchestrate_pipeline.py --execute-local-instance True
+          python orchestrate_fitness_training_pipeline.py --execute-local-instance True
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -154,8 +155,10 @@ jobs:
       - name: Deploy ml stacks
         run: |
           python orchestrate_pipeline.py --execute-local-instance False
+          python orchestrate_fitness_training_pipeline.py --execute-local-instance False
           cdk deploy ModelDeployerStack --require-approval=never
           cdk deploy StravaTrainProdPipelineStack --require-approval=never
+          cdk deploy FitnessTrainProdPipelineStack --require-approval=never
 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
