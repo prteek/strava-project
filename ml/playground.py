@@ -122,19 +122,44 @@ df_plot = (df_merged
           )
 
 plt.scatter(df_plot['suffer_score'], df_plot['score_diff'])
+plt.show()
 
-from sklearn.linear_model import Ridge
-model = Ridge(alpha=1.0)
+
+from sklearn.linear_model import SGDRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+model = make_pipeline(StandardScaler(),
+                    SGDRegressor(loss='squared_error',
+                     penalty='l2',
+                     alpha=0.01,
+                     max_iter=100,
+                     tol=1e-3,
+                     random_state=42,
+                     eta0=0.1,
+                     verbose=1)
+                      )
 
 PREDICTORS = ['suffer_score', 'fitness_score_initial']
 TARGET = 'fitness_score'
 
-df = df_plot.dropna(subset=[TARGET, *PREDICTORS])
+df = (df_merged
+      .assign(fitness_score_initial=lambda x: x['fitness_score'].shift(1),
+              score_diff=lambda x: x['fitness_score']-x['fitness_score_initial'])
+      .get(['suffer_score', 'score_diff', 'fitness_score_initial', 'fitness_score', 'date'])
+      .dropna(subset=[TARGET, *PREDICTORS])
+      )
+
 X = df[PREDICTORS].values
 y = df[TARGET].values
 
 model.fit(X, y)
 
 plt.scatter(y, model.predict(X))
+plt.plot([0, 10], [0, 10], '--', c='r')
+plt.xlabel('Real fitness score')
+plt.ylabel('Predicted fitness score')
+plt.title("Prediction performance")
+plt.show()
 
 
