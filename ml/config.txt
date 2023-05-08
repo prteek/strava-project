@@ -1,11 +1,14 @@
 [model]
 name = strava-v0
+fitness-model-name = strava-fitness-v0
 
 [endpoint]
 config-name = strava-v0
 name = strava
 memory-size-in-mb = 1024
 max-concurrency = 10
+fitness-config-name = strava-fitness-v0
+fitness-endpoint-name = strava-fitness
 
 [aws]
 bucket = pp-strava-data
