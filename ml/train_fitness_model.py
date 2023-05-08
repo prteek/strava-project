@@ -14,6 +14,12 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.optimize import curve_fit
 from sklearn.utils.validation import check_is_fitted
 
+PREDICTORS = ["suffer_score", "fitness_score_initial", "time_since_last_update"]
+PREDICTORS_ACTIVITY = ["suffer_score", "fitness_score_initial"]
+PREDICTORS_REST = ["fitness_score_initial", "time_since_last_update"]
+
+TARGET = "fitness_score"
+
 
 def model_fn(model_dir):
     """Load the model from the `model_dir` directory."""
@@ -26,7 +32,7 @@ def input_fn(input_data: str, content_type):
     try:
         if content_type == "text/csv":
             # Read the raw input data as CSV.
-            X = pd.read_csv(StringIO(input_data), names=PREDICTORS_)
+            X = pd.read_csv(StringIO(input_data), names=PREDICTORS)
             return X
 
     except Exception as e:
@@ -122,11 +128,6 @@ activity_model = Pipeline([('scaler', StandardScaler()),
 
 rest_model = ExponentialDecayEstimator()
 
-PREDICTORS = ["suffer_score", "fitness_score_initial", "time_since_last_update"]
-PREDICTORS_ACTIVITY = ["suffer_score", "fitness_score_initial"]
-PREDICTORS_REST = ["fitness_score_initial", "time_since_last_update"]
-
-TARGET = "fitness_score"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
