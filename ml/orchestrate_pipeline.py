@@ -38,7 +38,7 @@ def create_pipeline():
     session = PipelineSession()
 
     bucket = config.get("aws", "bucket")
-    image_uri = os.environ["IMAGE_URI"]
+    image_uri = config.get("aws", "image-uri")
     processing_local_dependencies = ["logger.py", "helpers.py"]
     helpers = upload_code_helpers(
         processing_local_dependencies, bucket, prefix="helpers"
