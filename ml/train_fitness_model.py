@@ -51,19 +51,6 @@ def expected_error(y_true, y_pred):
     return float(np.mean(y_true - y_pred))
 
 
-def read_and_parse_fitness_data(file):
-    df_r = (pd
-            .read_csv(file, parse_dates=["x"], dayfirst=True)
-            .rename({" y": "fitness_score",
-                     "x": "timestamp"}, axis=1)
-            .astype({"fitness_score": float, "timestamp": "datetime64[ns]"})
-            .assign(date=lambda x: x['timestamp'].dt.date.astype("str"),
-                    source=lambda x: file.split("/")[-1])
-            .sort_values("date")
-            )
-    return df_r
-
-
 class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
     def __init__(self):
         pass
