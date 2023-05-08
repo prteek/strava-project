@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from helpers import data_consistency_pipeline, PREDICTORS_, TARGET
 import argparse
 import joblib
 import pandas as pd
@@ -13,7 +12,6 @@ from logger import logger
 from io import StringIO
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.optimize import curve_fit
-from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
 
