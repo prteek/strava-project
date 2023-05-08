@@ -50,7 +50,7 @@ def create_pipeline():
     )
 
     prepare_data_output = f"s3://{bucket}/prepare-fitness-training-data/output/"
-
+    fitness_data_location = f"s3://{bucket}/fitness-curve-data/"
     prepare_data = ScriptProcessor(
         base_job_name="prepare-fitness-data",
         role=role,
@@ -70,7 +70,8 @@ def create_pipeline():
                 destination=prepare_data_output,
                 source="/opt/ml/processing/output/",
             )],
-        inputs=[ProcessingInput(helpers, "/opt/ml/processing/input")],
+        inputs=[ProcessingInput(helpers, "/opt/ml/processing/input"),
+                ProcessingInput(fitness_data_location, "/opt/ml/processing/input/fitness_data")],
         code=prepare_data_code_location,
     )
 
