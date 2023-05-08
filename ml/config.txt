@@ -6,7 +6,7 @@ fitness-model-name = strava-fitness-v0
 config-name = strava-v0
 name = strava
 memory-size-in-mb = 1024
-max-concurrency = 10
+max-concurrency = 2
 fitness-config-name = strava-fitness-v0
 fitness-endpoint-name = strava-fitness
 
