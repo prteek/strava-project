@@ -1,6 +1,15 @@
 import os
-from aws_cdk import aws_lambda, Duration, Stack, aws_iam, aws_sagemaker as sm, aws_events, aws_events_targets
+from aws_cdk import (aws_lambda,
+                     Duration,
+                     Stack,
+                     aws_iam,
+                     aws_sagemaker as sm,
+                     aws_events,
+                     aws_events_targets,
+                     aws_s3 as s3,
+                     aws_s3_notifications as s3_notify)
 from constructs import Construct
+
 
 ENV = os.environ["ENV"]
 SM_ROLE = os.environ["SAGEMAKER_EXECUTION_ROLE"]
@@ -139,10 +148,18 @@ class FitnessTrainProdPipelineStack(Stack):
             role=role,
         )
 
-        rule = aws_events.Rule(
-            self, "trigger_fitness_training_pipeline_rule",
-            schedule=aws_events.Schedule.rate(Duration.days(30)),
-            targets=[aws_events_targets.LambdaFunction(lambdaFn)],
-            enabled=True,
-        )
+        # Create S3 Bucket
+        bucket = s3.Bucket.from_bucket_name(self,
+                                            id='strava-bucket',
+                                            bucket_name='pp-strava-data')
+
+        # Create trigger for Lambda function using suffix
+        notification = s3_notify.LambdaDestination(lambdaFn)
+        notification.bind(self, bucket)
+
+        # Add Create Event only for fitness csv
+        bucket.add_object_created_notification(
+            notification, s3.NotificationKeyFilter(prefix='fitness-curve-data',
+                                                   suffix='.csv'))
+
 
