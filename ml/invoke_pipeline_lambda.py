@@ -21,7 +21,7 @@ def invoke_training_pipeline_handler(event, context=None):
 
 def invoke_fitness_training_pipeline_handler(event, context=None):
     """ Lambda handler to invoke fitness training pipeline"""
-    pipeline_name = "strava-fitness-pipeline"
+    pipeline_name = "fitness-ml-pipeline"
     invocation_timestamp = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
 
     response = client.start_pipeline_execution(
