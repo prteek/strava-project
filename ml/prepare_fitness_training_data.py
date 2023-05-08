@@ -71,7 +71,8 @@ if __name__ == "__main__":
                                     where start_timestamp >= date('{start_date}')
                                     and start_timestamp <= date('{end_date}')
                                     """,
-                                     "strava")
+                                     "strava",
+                                     boto3_session=boto3_session)
                      .assign(date=lambda x: x['start_timestamp'].dt.date.astype("str"))  # Take date for the activity
                      .sort_values("date")
                      )
