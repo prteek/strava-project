@@ -105,7 +105,7 @@ def predict_fn(input_data: pd.DataFrame, model):
     """Predict using the model and input data"""
     try:
         predictions_raw = model.predict(input_data)
-        predictions = [round(value) for value in predictions_raw]
+        predictions = [int(value) for value in predictions_raw]
         return predictions
     except Exception as e:
         logger.error(e)
