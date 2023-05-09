@@ -21,39 +21,6 @@ PREDICTORS_REST = ["fitness_score_initial", "time_since_last_update"]
 TARGET = "fitness_score"
 
 
-def model_fn(model_dir):
-    """Load the model from the `model_dir` directory."""
-    model = joblib.load(os.path.join(model_dir, "model.joblib"))
-    return model
-
-
-def input_fn(input_data: str, content_type):
-    """Parse input data payload as properly formatted dataframe"""
-    try:
-        if content_type == "text/csv":
-            # Read the raw input data as CSV.
-            X = pd.read_csv(StringIO(input_data), names=PREDICTORS)
-            return X
-
-    except Exception as e:
-        logger.error(e)
-        logger.error(f"Error parsing input data {input_data}")
-
-
-def predict_fn(input_data: pd.DataFrame, model):
-    """Predict using the model and input data"""
-    try:
-        predictions_raw = model.predict(input_data)
-        predictions = [round(value) for value in predictions_raw]
-        return predictions
-    except Exception as e:
-        logger.error(e)
-        logger.error(f"Error predicting on input data {input_data}")
-
-
-def expected_error(y_true, y_pred):
-    return float(np.mean(y_true - y_pred))
-
 
 class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -115,18 +82,38 @@ class FitnessModel(BaseEstimator, TransformerMixin):
         return X_['fitness_score'].values
 
 
-activity_model = Pipeline([('scaler', StandardScaler()),
-                  ('estimator', SGDRegressor(loss='squared_error',
-                                             penalty='l2',
-                                             alpha=0.01,
-                                             max_iter=100,
-                                             tol=1e-3,
-                                             random_state=42,
-                                             eta0=0.1,
-                                             verbose=1))
-                  ])
+def model_fn(model_dir):
+    """Load the model from the `model_dir` directory."""
+    model = joblib.load(os.path.join(model_dir, "model.joblib"))
+    return model
 
-rest_model = ExponentialDecayEstimator()
+
+def input_fn(input_data: str, content_type):
+    """Parse input data payload as properly formatted dataframe"""
+    try:
+        if content_type == "text/csv":
+            # Read the raw input data as CSV.
+            X = pd.read_csv(StringIO(input_data), names=PREDICTORS)
+            return X
+
+    except Exception as e:
+        logger.error(e)
+        logger.error(f"Error parsing input data {input_data}")
+
+
+def predict_fn(input_data: pd.DataFrame, model):
+    """Predict using the model and input data"""
+    try:
+        predictions_raw = model.predict(input_data)
+        predictions = [round(value) for value in predictions_raw]
+        return predictions
+    except Exception as e:
+        logger.error(e)
+        logger.error(f"Error predicting on input data {input_data}")
+
+
+def expected_error(y_true, y_pred):
+    return float(np.mean(y_true - y_pred))
 
 
 if __name__ == "__main__":
@@ -174,6 +161,9 @@ if __name__ == "__main__":
 
     X = df_rest[PREDICTORS_REST]
     y = df_rest[TARGET]
+
+    rest_model = ExponentialDecayEstimator()
+
     rest_model.fit(X, y)
     rest_model.PREDICTORS = PREDICTORS_REST
 
@@ -194,6 +184,17 @@ if __name__ == "__main__":
 
     X = df_activity[PREDICTORS_ACTIVITY]
     y = df_activity[TARGET]
+
+    activity_model = Pipeline([('scaler', StandardScaler()),
+                               ('estimator', SGDRegressor(loss='squared_error',
+                                                          penalty='l2',
+                                                          alpha=0.01,
+                                                          max_iter=100,
+                                                          tol=1e-3,
+                                                          random_state=42,
+                                                          eta0=0.1,
+                                                          verbose=1))
+                               ])
 
     activity_model.fit(df_activity[PREDICTORS_ACTIVITY], df_activity[TARGET])
     activity_model.PREDICTORS = PREDICTORS_ACTIVITY
