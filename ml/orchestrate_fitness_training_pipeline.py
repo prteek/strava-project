@@ -3,6 +3,7 @@ import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 from sagemaker.inputs import TrainingInput
 from sagemaker.sklearn import SKLearn
+from sagemaker.estimator import Estimator
 from sagemaker.model import Model
 import configparser
 from sagemaker.workflow.pipeline_context import LocalPipelineSession, PipelineSession
@@ -79,13 +80,13 @@ def create_pipeline():
     train_output_location = (
         f"s3://{bucket}/fitness-train/job-artefacts"  # Model artefacts will be uploaded here
     )
-    local_dependencies = ["logger.py"]
+    local_dependencies = ["logger.py", "helpers.py"]
 
-    estimator = SKLearn(
+    estimator = Estimator(
         base_job_name="fitness-model-training",
         role=role,
         entry_point="train_fitness_model.py",
-        framework_version="1.0-1",
+        image_uri=image_uri,
         instance_count=1,
         instance_type=train_instance_type,
         dependencies=local_dependencies,
