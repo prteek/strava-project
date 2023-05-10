@@ -111,5 +111,4 @@ if __name__ == "__main__":
     logger.info("Saving model")
     model = FitnessModel(activity_model, rest_model)
     model.PREDICTORS = PREDICTORS_FITNESS
-    model = activity_model
     joblib.dump(model, os.path.join(model_dir, "model.joblib"))
