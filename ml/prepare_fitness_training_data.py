@@ -80,6 +80,7 @@ if __name__ == "__main__":
     df_merged = (pd
                  .merge(df_fitness, df_activities,
                         on="date",how="outer")
+                 .sort_values("start_timestamp")
                  .astype({"fitness_score": float,
                           "date": "datetime64[ns]",
                           "id": float,
