@@ -87,9 +87,9 @@ def expected_error(y_true, y_pred):
 
 
 # ------------------ Fitness Model ------------------ #
-PREDICTORS_FITNESS = ["suffer_score", "fitness_score_initial", "time_since_last_update"]
-TARGET_FITNESS = "fitness_score"
-PREDICTORS_ACTIVITY = ["suffer_score", "fitness_score_initial"]
+PREDICTORS_FITNESS = ["fitness_score_initial", "time_since_last_update", "suffer_score"]
+TARGET_FITNESS = ["fitness_score_pre", "fitness_score"]
+PREDICTORS_ACTIVITY = ["suffer_score", "fitness_score_pre"]
 PREDICTORS_REST = ["fitness_score_initial", "time_since_last_update"]
 
 
@@ -132,27 +132,30 @@ class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
 
 
 class FitnessModel(BaseEstimator, TransformerMixin):
-    def __init__(self, activity_model, rest_model):
-        self.activity_model = activity_model
+    def __init__(self, rest_model, activity_model):
+        self.PREDICTORS_REST = PREDICTORS_REST
+        self.PREDICTORS_ACTIVITY = PREDICTORS_ACTIVITY
         self.rest_model = rest_model
-        check_is_fitted(self.activity_model, msg="Activity model not fitted")
-        check_is_fitted(self.rest_model, msg="Rest model not fitted")
-        # self.estimator_ = [self.activity_model, self.rest_model]
+        self.activity_model = activity_model
 
-    def fit(self, X=None, y=None):
-        pass
+    def fit(self, X, y):
+        X = X.copy()
+        X_rest, y_rest = X[self.PREDICTORS_REST], y["fitness_score_pre"]
+        self.rest_model.fit(X_rest, y_rest)
+        y_pred_rest = self.rest_model.predict(X_rest)
+
+        X["fitness_score_pre"] = y_pred_rest
+        X_activity, y_activity = X[self.PREDICTORS_ACTIVITY], y["fitness_score"]
+        self.activity_model.fit(X_activity, y_activity)
+        self.estimator_ = [self.rest_model, self.activity_model]
+
+        return self
 
     def predict(self, X):
-        """Predict using the model"""
-        X_ = X.copy()
-        X_['fitness_score'] = -99999.0
-        i_activity = X_['suffer_score'] > 0
-        PREDICTORS_ACTIVITY = self.activity_model.PREDICTORS
-        X_.loc[i_activity, 'fitness_score'] = self.activity_model.predict(X_.loc[i_activity, PREDICTORS_ACTIVITY])
-
-        i_rest = X_['suffer_score'] == 0
-        PREDICTORS_REST = self.rest_model.PREDICTORS
-        X_.loc[i_rest, 'fitness_score'] = self.rest_model.predict(X_.loc[i_rest, PREDICTORS_REST])
-
-        return X_['fitness_score'].values
-
+        X = X.copy()
+        X_rest = X[self.PREDICTORS_REST]
+        y_pred_rest = self.rest_model.predict(X_rest)
+        X["fitness_score_pre"] = y_pred_rest
+        X_activity = X[self.PREDICTORS_ACTIVITY]
+        y_pred_activity = self.activity_model.predict(X_activity)
+        return np.c_[y_pred_rest, y_pred_activity]

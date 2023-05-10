@@ -80,7 +80,11 @@ if __name__ == "__main__":
     df_merged = (pd
                  .merge(df_fitness, df_activities,
                         on="date",how="outer")
-                 .sort_values("start_timestamp")
+                 .sort_values("timestamp")
+                 .assign(fitness_score_pre = lambda x: x['fitness_score'].shift(1))
+                 .dropna(subset=['id'])
+                 .assign(time_since_last_update=lambda x: (x['date'].astype("datetime64").diff()).dt.days,
+                         fitness_score_initial=lambda x: x['fitness_score'].shift(1))
                  .astype({"fitness_score": float,
                           "date": "datetime64[ns]",
                           "id": float,
