@@ -17,26 +17,16 @@ feature_type_mapping = {
 }
 
 # These features are used by model during training and prediction
-PREDICTORS_ = [
+PREDICTORS = [
     "moving_time",
     "average_heartrate",
 ]
 
 # Check if all required features have defined type specification
 assert set(feature_type_mapping.keys()) == set(
-    PREDICTORS_
+    PREDICTORS
 ), "Features are missing type specification"
 
-
-# We want more inputs like id compared to what model uses to make predictions for debugging etc.
-PREDICTORS = [
-    "id",
-] + PREDICTORS_
-
-# What model uses to make predictions must be a subset of what we have as inputs
-assert set(PREDICTORS_) <= set(
-    PREDICTORS
-), "Columns defined to be used by model are not a subset of input columns"
 
 NO_NULL_FEATURES = [
     "moving_time",
@@ -44,7 +34,7 @@ NO_NULL_FEATURES = [
 ]
 
 assert set(NO_NULL_FEATURES) <= set(
-    PREDICTORS_
+    PREDICTORS
 ), "Columns required to be full must be a subset of input columns"
 
 
@@ -53,7 +43,7 @@ TARGET = "suffer_score"
 
 def check_predictors(df):
     """Check if all the predictors exist in input dataframe"""
-    assert set(PREDICTORS_).issubset(
+    assert set(PREDICTORS).issubset(
         set(df.columns)
     ), "Predictors missing in input data"
     return df
@@ -90,6 +80,7 @@ data_consistency_pipeline = Pipeline(
 data_consistency_pipeline.set_params(
     no_null_check__kw_args={"columns": NO_NULL_FEATURES}
 )
+
 
 def expected_error(y_true, y_pred):
     return float(np.mean(y_true - y_pred))
