@@ -1,7 +1,10 @@
 import pandas as pd
 from sklearn.preprocessing import FunctionTransformer as FT
 from sklearn.pipeline import Pipeline
-
+from sklearn.base import BaseEstimator, TransformerMixin
+from scipy.optimize import curve_fit
+from sklearn.utils.validation import check_is_fitted
+import numpy as np
 
 QUERY_ACTIVITIES = """
 SELECT * FROM strava.activities
@@ -87,3 +90,78 @@ data_consistency_pipeline = Pipeline(
 data_consistency_pipeline.set_params(
     no_null_check__kw_args={"columns": NO_NULL_FEATURES}
 )
+
+def expected_error(y_true, y_pred):
+    return float(np.mean(y_true - y_pred))
+
+
+# ------------------ Fitness Model ------------------ #
+PREDICTORS_FITNESS = ["suffer_score", "fitness_score_initial", "time_since_last_update"]
+TARGET_FITNESS = "fitness_score"
+PREDICTORS_ACTIVITY = ["suffer_score", "fitness_score_initial"]
+PREDICTORS_REST = ["fitness_score_initial", "time_since_last_update"]
+
+
+class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def decay_model(ini, t, coefs):
+        """Exponential decay base model"""
+        b = coefs[0]
+        c = coefs[1]
+        return ini * np.exp(-b * t) + c
+
+    @staticmethod
+    def _exponential_decay_model_opt(x, b, c):
+        """Exponential decay model function to fit"""
+        ini = x[:, 0]
+        t = x[:, 1]
+        return ExponentialDecayEstimator.decay_model(ini, t, [b, c])
+
+    def _format_input(self, X):
+        if isinstance(X, pd.DataFrame):
+            X_ = X.values
+        else:
+            X_ = X
+
+        return X_
+
+    def fit(self, X, y):
+        """Fit the model to the data"""
+        X_ = self._format_input(X)
+        self.coef_, _ = curve_fit(self._exponential_decay_model_opt, X_, y)
+        return self
+
+    def predict(self, X):
+        """Predict using the model"""
+        X_ = self._format_input(X)
+        return self._exponential_decay_model_opt(X_, *self.coef_)
+
+
+class FitnessModel(BaseEstimator, TransformerMixin):
+    def __init__(self, activity_model, rest_model):
+        self.activity_model = activity_model
+        self.rest_model = rest_model
+        check_is_fitted(self.activity_model, msg="Activity model not fitted")
+        check_is_fitted(self.rest_model, msg="Rest model not fitted")
+        # self.estimator_ = [self.activity_model, self.rest_model]
+
+    def fit(self, X=None, y=None):
+        pass
+
+    def predict(self, X):
+        """Predict using the model"""
+        X_ = X.copy()
+        X_['fitness_score'] = -99999.0
+        i_activity = X_['suffer_score'] > 0
+        PREDICTORS_ACTIVITY = self.activity_model.PREDICTORS
+        X_.loc[i_activity, 'fitness_score'] = self.activity_model.predict(X_.loc[i_activity, PREDICTORS_ACTIVITY])
+
+        i_rest = X_['suffer_score'] == 0
+        PREDICTORS_REST = self.rest_model.PREDICTORS
+        X_.loc[i_rest, 'fitness_score'] = self.rest_model.predict(X_.loc[i_rest, PREDICTORS_REST])
+
+        return X_['fitness_score'].values
+
