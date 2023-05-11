@@ -22,7 +22,8 @@ def input_fn(input_data, content_type):
     try:
         if content_type == "text/csv":
             # Read the raw input data as CSV.
-            X = pd.read_csv(StringIO(input_data))
+            input_data_ = input_data.decode('utf-8')
+            X = pd.read_csv(StringIO(input_data_))
             return X
 
     except Exception as e:
@@ -36,7 +37,8 @@ def predict_fn(input_data: pd.DataFrame, model):
     try:
         input_data.columns = model.PREDICTORS
         predictions_raw = model.predict(input_data)
-        predictions = [value for value in predictions_raw]
+        predictions = [value if len(value) == 1 else list(value)
+                       for value in predictions_raw]
         return predictions
     except Exception as e:
         logger.error(e)
