@@ -35,7 +35,8 @@ def handler(event, context=None):
 
     else:
         result_blob = []
-        for activity in suffer_score_blob:
+        suffer_score_blob_sorted = sorted(suffer_score_blob, key=lambda x: x["activity_id"])
+        for activity in suffer_score_blob_sorted:
             print(f"Processing activity {activity['activity_id']}")
             activity_id = activity['activity_id']
             activity_timestamp = wr.athena.read_sql_query(
