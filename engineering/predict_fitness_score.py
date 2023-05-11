@@ -27,15 +27,30 @@ LIMIT 1
 
 boto3_session = boto3.Session(region_name="eu-west-1")
 
+
+def add_timestamps(blob):
+    """Add start_timestamp to each activity in blob"""
+    for i in blob:
+        activity_id = i["activity_id"]
+        t = wr.athena.read_sql_query(QUERY_ACTIVITY_TIMESTAMP.format(activity_id=activity_id),
+                                     "strava",
+                                     boto3_session=boto3_session,
+                                     ctas_approach=False)
+        i.update({"start_timestamp": t["start_timestamp"].values[0]})
+    return None
+
+
 def handler(event, context=None):
     predictor = Predictor("strava-fitness", serializer=CSVSerializer())
     suffer_score_blob = json.loads(event["body"])
+
     if len(suffer_score_blob) == 0:
         return {"statusCode": 200, "body": json.dumps([])}
 
     else:
         result_blob = []
-        suffer_score_blob_sorted = sorted(suffer_score_blob, key=lambda x: x["activity_id"])
+        add_timestamps(suffer_score_blob)
+        suffer_score_blob_sorted = sorted(suffer_score_blob, key=lambda x: x["start_timestamp"])
         for activity in suffer_score_blob_sorted:
             print(f"Processing activity {activity['activity_id']}")
             activity_id = activity['activity_id']
