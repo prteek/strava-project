@@ -83,7 +83,9 @@ def handler(event, context=None):
                 boto3_session=boto3_session,
             )
 
-            result_blob.append(activity_fitness)
+            result_blob.append({"activity_id": activity_id,
+                                "fitness_score_pre": predictions[0],
+                                "fitness_score": predictions[1]})
 
         return {"statusCode": 200, "body": json.dumps(result_blob)}
 
