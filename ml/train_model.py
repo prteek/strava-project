@@ -42,12 +42,12 @@ if __name__ == "__main__":
             ("scaler", StandardScaler()),
             (
                 "feature_engineering",
-                PolynomialFeatures(degree=2, interaction_only=True, include_bias=False),
+                PolynomialFeatures(degree=3, interaction_only=False, include_bias=False),
             ),
         ]
     )
 
-    estimator = PoissonRegressor(alpha=1)
+    estimator = PoissonRegressor(alpha=5)
     model = Pipeline([("preprocessing", preprocessing), ("estimator", estimator)])
 
     # model.set_output(transform="pandas")
@@ -69,3 +69,5 @@ if __name__ == "__main__":
 
     logger.info("Saving model")
     joblib.dump(model, os.path.join(model_dir, "model.joblib"))
+
+#%%
