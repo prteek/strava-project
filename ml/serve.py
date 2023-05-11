@@ -2,6 +2,7 @@
 import joblib
 import os
 import pandas as pd
+import numpy as np
 from io import StringIO
 import flask
 from flask import Flask, Response
@@ -37,7 +38,7 @@ def predict_fn(input_data: pd.DataFrame, model):
     try:
         input_data.columns = model.PREDICTORS
         predictions_raw = model.predict(input_data)
-        predictions = [value if len(value) == 1 else list(value)
+        predictions = [list(value) if isinstance(value, np.ndarray) else value
                        for value in predictions_raw]
         return predictions
     except Exception as e:
