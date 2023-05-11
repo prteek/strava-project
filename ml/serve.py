@@ -23,7 +23,7 @@ def input_fn(input_data, content_type):
         if content_type == "text/csv":
             # Read the raw input data as CSV.
             input_data_ = input_data.decode('utf-8')
-            X = pd.read_csv(StringIO(input_data_))
+            X = pd.read_csv(StringIO(input_data_), header=None)
             return X
 
     except Exception as e:
