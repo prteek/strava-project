@@ -27,7 +27,38 @@ class DataEngineeringStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # Predictor Lambda
+        # Fitness Lambda
+        ecr_image = aws_lambda.EcrImageCode.from_asset_image(
+            directory=os.getcwd(),
+            cmd=["predict_fitness_score.handler"],
+            file="engineering.Dockerfile",
+        )
+
+        role = aws_iam.Role(self, "strava_fitness_predictor_lambda_role",
+                            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                            managed_policies=[lambda_exec_policy,
+                                              s3_full_access_policy,
+                                              athena_full_access_policy,
+                                              sagemaker_full_access_policy,
+                                              glue_full_access_policy,
+                                              ]
+                            )
+
+        fitness_score_lambda = aws_lambda.Function(self,
+                                               id="strava_predict_fitness_score",
+                                               description="Make predictions using suffer score data from Strava",
+                                               code=ecr_image,
+                                               handler=aws_lambda.Handler.FROM_IMAGE,
+                                               runtime=aws_lambda.Runtime.FROM_IMAGE,
+                                               architecture=architecture_map[ENV],
+                                               function_name="strava_fitness_score_predictor",
+                                               memory_size=256,
+                                               reserved_concurrent_executions=2,
+                                               timeout=Duration.seconds(600),
+                                               role=role,
+                                               )
+
+        # Suffer score Lambda
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
             directory=os.getcwd(),
             cmd=["predict_suffer_score.handler"],
@@ -44,7 +75,7 @@ class DataEngineeringStack(Stack):
                                               ]
                             )
 
-        predictor_lambda = aws_lambda.Function(self,
+        suffer_score_lambda = aws_lambda.Function(self,
                                                id="strava_predict_suffer_score",
                                                description="Make predictions on fetched data from Strava",
                                                code=ecr_image,
@@ -55,8 +86,11 @@ class DataEngineeringStack(Stack):
                                                memory_size=256,
                                                reserved_concurrent_executions=2,
                                                timeout=Duration.seconds(180),
+                                               on_success=aws_lambda_destinations.LambdaDestination(fitness_score_lambda,
+                                                                                                    response_only=True),
                                                role=role,
                                                )
+
 
         # Data Fetch Lambda
         ecr_image = aws_lambda.EcrImageCode.from_asset_image(
@@ -94,7 +128,7 @@ class DataEngineeringStack(Stack):
             memory_size=256,
             reserved_concurrent_executions=2,
             timeout=Duration.seconds(120),
-            on_success=aws_lambda_destinations.LambdaDestination(predictor_lambda,
+            on_success=aws_lambda_destinations.LambdaDestination(suffer_score_lambda,
                                                                  response_only=True),
             role=role
         )
