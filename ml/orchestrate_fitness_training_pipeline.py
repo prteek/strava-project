@@ -2,7 +2,6 @@ import os
 import sagemaker
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 from sagemaker.inputs import TrainingInput
-from sagemaker.sklearn import SKLearn
 from sagemaker.estimator import Estimator
 from sagemaker.model import Model
 import configparser
