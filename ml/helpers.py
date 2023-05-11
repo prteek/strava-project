@@ -102,7 +102,7 @@ class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
         """Exponential decay base model"""
         b = coefs[0]
         c = coefs[1]
-        return ini * np.exp(-b * t) + c
+        return ini * np.exp(-b * t) + c*0
 
     @staticmethod
     def _exponential_decay_model_opt(x, b, c):
