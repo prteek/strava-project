@@ -41,7 +41,10 @@ def handler(event, context=None):
                       .get(["id"])
                       .rename(columns={"id": "activity_id"})
                       .assign(predicted_suffer_score=y,
-                              prediction_timestamp=datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
+                              prediction_timestamp=datetime.now())
+                      .astype({"activity_id": float,
+                               "predicted_suffer_score": float,
+                               "prediction_timestamp": "datetime64[s]"})
                       )
 
         wr.s3.to_csv(
@@ -56,5 +59,6 @@ def handler(event, context=None):
             boto3_session=boto3_session,
         )
 
-        results_dump = df_results.to_dict('records')
+        df_results_json_compatible = df_results[["activity_id", "predicted_suffer_score"]]
+        results_dump = df_results_json_compatible.to_dict('records')
         return {"statusCode": 200, "body": json.dumps(results_dump)}
