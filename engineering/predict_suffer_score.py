@@ -34,7 +34,7 @@ def handler(event, context=None):
             boto3_session=boto3_session,
         )
 
-        X = df_activities[PREDICTORS_].values
+        X = df_activities[PREDICTORS_].fillna(0).values
         y = eval(predictor.predict(X).decode())
 
         df_results = (df_activities
