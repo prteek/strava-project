@@ -58,8 +58,8 @@ def handler(event, context=None):
             predictions = eval(predictor.predict(payload).decode())[0]
             activity_fitness = {"activity_id": activity_id,
                                 "start_timestamp": activity_timestamp['start_timestamp'].values[0],
-                                "fitness_score_pre": predictions[0],
-                                "fitness_score": predictions[1],
+                                "fitness_score_pre": round(predictions[0],2),
+                                "fitness_score": round(predictions[1],2),
                                 "prediction_timestamp": datetime.now()}
 
             df_activity_fitness = (pd

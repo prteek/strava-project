@@ -5,6 +5,7 @@ import boto3
 from sagemaker.predictor import Predictor
 from sagemaker.serializers import CSVSerializer, JSONSerializer
 from datetime import datetime
+import numpy as np
 
 PREDICTORS_ = [
     "moving_time",
@@ -35,7 +36,7 @@ def handler(event, context=None):
         )
 
         X = df_activities[PREDICTORS_].fillna(0).values
-        y = eval(predictor.predict(X).decode())
+        y = np.round(eval(predictor.predict(X).decode()),0)
 
         df_results = (df_activities
                       .get(["id"])
