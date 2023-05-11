@@ -36,7 +36,7 @@ def predict_fn(input_data: pd.DataFrame, model):
     try:
         input_data.columns = model.PREDICTORS
         predictions_raw = model.predict(input_data)
-        predictions = [int(value) for value in predictions_raw]
+        predictions = [value for value in predictions_raw]
         return predictions
     except Exception as e:
         logger.error(e)
