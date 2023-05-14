@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import numpy as np
 import awswrangler as wr
 import boto3
 from sagemaker.predictor import Predictor
@@ -54,25 +55,21 @@ def handler(event, context=None):
         for activity in suffer_score_blob_sorted:
             print(f"Processing activity {activity['activity_id']}")
             activity_id = activity['activity_id']
-            activity_timestamp = wr.athena.read_sql_query(
-                QUERY_ACTIVITY_TIMESTAMP.format(activity_id=activity_id),
-                "strava",
-                boto3_session=boto3_session,
-                ctas_approach=False)
+            activity_timestamp = activity['start_timestamp']
 
             previous_activity = wr.athena.read_sql_query(
                 QUERY_PREVIOUS_FITNESS.format(activity_id=activity_id),
                 "strava",
                 boto3_session=boto3_session,
-                ctas_approach=False)
+                ctas_approach=False).to_dict(orient="records")[0]
 
-            time_since_last_update = (activity_timestamp['start_timestamp'] - previous_activity["start_timestamp"]).dt.days.values[0]
-            fitness_score_initial = previous_activity["fitness_score"].values[0]
+            time_since_last_update = np.timedelta64(activity_timestamp - previous_activity["start_timestamp"], 'D').astype(int)
+            fitness_score_initial = previous_activity["fitness_score"]
             suffer_score = activity["predicted_suffer_score"]
             payload = [[fitness_score_initial, time_since_last_update, suffer_score]]
             predictions = eval(predictor.predict(payload).decode())[0]
             activity_fitness = {"activity_id": activity_id,
-                                "start_timestamp": activity_timestamp['start_timestamp'].values[0],
+                                "start_timestamp": activity_timestamp,
                                 "fitness_score_pre": round(predictions[0],2),
                                 "fitness_score": round(predictions[1],2),
                                 "prediction_timestamp": datetime.now()}
