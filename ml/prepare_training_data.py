@@ -41,9 +41,10 @@ if __name__ == "__main__":
 
     logger.info("Formatting training data")
     df_activities = (
-        df_activities_.get(PREDICTORS + [TARGET])
-        .dropna(subset=[TARGET])
-        .dropna(subset=NO_NULL_FEATURES)
+        df_activities_
+        .dropna(subset=[TARGET, *NO_NULL_FEATURES])
+        .sort_values("start_timestamp")
+        .get(PREDICTORS + [TARGET])
         .pipe(format_input_data)
     )
 
