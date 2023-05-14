@@ -5,11 +5,20 @@ import joblib
 import pandas as pd
 import os
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.preprocessing import StandardScaler, FunctionTransformer as FT
 from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 from logger import logger
+
+
+def add_exp_heartrate(X):
+    """Add exponential of heartrate (scaled for sensibility) as a new feature"""
+    X = (X
+         .copy()
+         .assign(exp_average_heartrate = np.exp((X["average_heartrate"] - 120)/25))
+         )
+    return X
 
 
 if __name__ == "__main__":
@@ -39,19 +48,13 @@ if __name__ == "__main__":
     preprocessing = Pipeline(
         [
             ("data_consistency", data_consistency_pipeline),
-            ("scaler", StandardScaler()),
-            (
-                "feature_engineering",
-                PolynomialFeatures(degree=3, interaction_only=False, include_bias=False),
-            ),
+            ("exp_hr", FT(add_exp_heartrate)),
+            ("scaler", StandardScaler())
         ]
     )
 
-    estimator = PoissonRegressor(alpha=5)
+    estimator = PoissonRegressor(alpha=5, fit_intercept=True)
     model = Pipeline([("preprocessing", preprocessing), ("estimator", estimator)])
-
-    # model.set_output(transform="pandas")
-    # model.set_params(feature_engineering=None)
 
     X = df_train[PREDICTORS]
     y = df_train[TARGET]
