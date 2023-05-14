@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-from helpers import data_consistency_pipeline, PREDICTORS, TARGET, expected_error
+from helpers import (data_consistency_pipeline,
+                     PREDICTORS,
+                     TARGET,
+                     expected_error,
+                     add_exp_heartrate
+                     )
 import argparse
 import joblib
 import pandas as pd
@@ -10,15 +15,6 @@ from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 from logger import logger
-
-
-def add_exp_heartrate(X):
-    """Add exponential of heartrate (scaled for sensibility) as a new feature"""
-    X = (X
-         .copy()
-         .assign(exp_average_heartrate = np.exp((X["average_heartrate"] - 120)/25))
-         )
-    return X
 
 
 if __name__ == "__main__":

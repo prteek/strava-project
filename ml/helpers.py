@@ -82,6 +82,15 @@ data_consistency_pipeline.set_params(
 )
 
 
+def add_exp_heartrate(X):
+    """Add exponential of heartrate (scaled for sensibility) as a new feature"""
+    X = (X
+         .copy()
+         .assign(exp_average_heartrate = np.exp((X["average_heartrate"] - 120)/25))
+         )
+    return X
+
+
 def expected_error(y_true, y_pred):
     return float(np.mean(y_true - y_pred))
 
