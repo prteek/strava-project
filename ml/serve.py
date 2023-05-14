@@ -6,9 +6,9 @@ import numpy as np
 from io import StringIO
 import flask
 from flask import Flask, Response
+
 # Put the following files in /usr/bin in Docker container
-from helpers import (ExponentialDecayEstimator,
-                     FitnessModel)
+from helpers import ExponentialDecayEstimator, FitnessModel
 from logger import logger
 
 
@@ -23,7 +23,7 @@ def input_fn(input_data, content_type):
     try:
         if content_type == "text/csv":
             # Read the raw input data as CSV.
-            input_data_ = input_data.decode('utf-8')
+            input_data_ = input_data.decode("utf-8")
             X = pd.read_csv(StringIO(input_data_), header=None)
             return X
 
@@ -38,8 +38,10 @@ def predict_fn(input_data: pd.DataFrame, model):
     try:
         input_data.columns = model.PREDICTORS
         predictions_raw = model.predict(input_data)
-        predictions = [list(value) if isinstance(value, np.ndarray) else value
-                       for value in predictions_raw]
+        predictions = [
+            list(value) if isinstance(value, np.ndarray) else value
+            for value in predictions_raw
+        ]
         return predictions
     except Exception as e:
         logger.error(e)
@@ -48,7 +50,7 @@ def predict_fn(input_data: pd.DataFrame, model):
 
 
 app = Flask(__name__)
-model = model_fn(model_dir='/opt/ml/model')
+model = model_fn(model_dir="/opt/ml/model")
 
 
 @app.route("/ping", methods=["GET"])
@@ -66,13 +68,17 @@ def predict():
     X = input_fn(input_data, content_type)
 
     if X is None:
-        return Response(response='Parsing process failure', status=400, mimetype='text/plain')
+        return Response(
+            response="Parsing process failure", status=400, mimetype="text/plain"
+        )
 
     else:
         # Predict on the data
         predictions = predict_fn(X, model)
         if predictions is None:
-            return Response(response='Prediction process failure', status=400, mimetype='text/plain')
+            return Response(
+                response="Prediction process failure", status=400, mimetype="text/plain"
+            )
         else:
             response = str(predictions)
             return Response(response=response, status=200)

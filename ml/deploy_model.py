@@ -28,7 +28,7 @@ class ModelAdapter:
         self.sm_client = sagemaker_client
 
     def _create_serverless_epc(
-            self, endpoint_config_name: str, memory_size_in_mb: int, max_concurrency: int
+        self, endpoint_config_name: str, memory_size_in_mb: int, max_concurrency: int
     ):
         """Create a new End point config for serverless inference,
          that uses current model. This config is created for each deployment update as
@@ -51,11 +51,11 @@ class ModelAdapter:
         return create_endpoint_config_response
 
     def update_serverless_endpoint(
-            self,
-            endpoint_name: str,
-            endpoint_config_base_name: str,
-            memory_size_in_mb: int = 1024,
-            max_concurrency: int = 5,
+        self,
+        endpoint_name: str,
+        endpoint_config_base_name: str,
+        memory_size_in_mb: int = 1024,
+        max_concurrency: int = 5,
     ):
         """Update existing end point with a new model"""
         endpoint_config_name = f"{endpoint_config_base_name}-{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}"
@@ -89,7 +89,7 @@ class ModelAdapter:
 
 
 def handler(event, context=None):
-    """ Lambda handler to deploy a model to serverless endpoint"""
+    """Lambda handler to deploy a model to serverless endpoint"""
 
     model_name = event["model_name"]
     image_uri = event["image_uri"]
@@ -99,9 +99,7 @@ def handler(event, context=None):
     max_concurrency = int(event["max_concurrency"])
 
     # ----- Deploy model ----- #
-    model = Model(name=model_name,
-                  image_uri=image_uri,
-                  role=role)
+    model = Model(name=model_name, image_uri=image_uri, role=role)
 
     model_adapted = ModelAdapter(model, sm_client)
 
@@ -117,7 +115,9 @@ def handler(event, context=None):
         sic = ServerlessInferenceConfig(
             memory_size_in_mb=memory_size_in_mb, max_concurrency=max_concurrency
         )
-        model_adapted.deploy(endpoint_name=endpoint_name, serverless_inference_config=sic)
+        model_adapted.deploy(
+            endpoint_name=endpoint_name, serverless_inference_config=sic
+        )
 
     return {
         "statusCode": 200,

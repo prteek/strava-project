@@ -43,19 +43,14 @@ TARGET = "suffer_score"
 
 def check_predictors(df):
     """Check if all the predictors exist in input dataframe"""
-    assert set(PREDICTORS).issubset(
-        set(df.columns)
-    ), "Predictors missing in input data"
+    assert set(PREDICTORS).issubset(set(df.columns)), "Predictors missing in input data"
     return df
 
 
 def format_input_data(df_):
     """Format input data to pass clean version downstream
     Note: Don't try to do too much in this function"""
-    df = (df_.copy()
-          .astype(feature_type_mapping)
-          .pipe(check_predictors)
-          )
+    df = df_.copy().astype(feature_type_mapping).pipe(check_predictors)
 
     return df
 
@@ -84,10 +79,9 @@ data_consistency_pipeline.set_params(
 
 def add_exp_heartrate(X):
     """Add exponential of heartrate (scaled for sensibility) as a new feature"""
-    X = (X
-         .copy()
-         .assign(exp_average_heartrate = np.exp((X["average_heartrate"] - 120)/25))
-         )
+    X = X.copy().assign(
+        exp_average_heartrate=np.exp((X["average_heartrate"] - 120) / 25)
+    )
     return X
 
 
@@ -111,7 +105,7 @@ class ExponentialDecayEstimator(BaseEstimator, TransformerMixin):
         """Exponential decay base model"""
         b = coefs[0]
         c = coefs[1]
-        return ini * np.exp(-b * t) + c*0
+        return ini * np.exp(-b * t) + c * 0
 
     @staticmethod
     def _exponential_decay_model_opt(x, b, c):

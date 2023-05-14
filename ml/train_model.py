@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-from helpers import (data_consistency_pipeline,
-                     PREDICTORS,
-                     TARGET,
-                     expected_error,
-                     add_exp_heartrate
-                     )
+from helpers import (
+    data_consistency_pipeline,
+    PREDICTORS,
+    TARGET,
+    expected_error,
+    add_exp_heartrate,
+)
 import argparse
 import joblib
 import pandas as pd
@@ -45,7 +46,7 @@ if __name__ == "__main__":
         [
             ("data_consistency", data_consistency_pipeline),
             ("exp_hr", FT(add_exp_heartrate)),
-            ("scaler", StandardScaler())
+            ("scaler", StandardScaler()),
         ]
     )
 
@@ -69,4 +70,4 @@ if __name__ == "__main__":
     logger.info("Saving model")
     joblib.dump(model, os.path.join(model_dir, "model.joblib"))
 
-#%%
+# %%

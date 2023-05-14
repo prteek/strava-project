@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 import aws_cdk as cdk
-from ml_stacks import ModelDeployerStack, StravaTrainProdPipelineStack, FitnessTrainProdPipelineStack
+from ml_stacks import (
+    ModelDeployerStack,
+    StravaTrainProdPipelineStack,
+    FitnessTrainProdPipelineStack,
+)
 
 app = cdk.App()
 env = {"region": "eu-west-1"}

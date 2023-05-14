@@ -45,7 +45,9 @@ def create_pipeline():
 
     # ----- Prepare training data ----- #
     prepare_data_code_location = session.upload_data(
-        "prepare_fitness_training_data.py", bucket=bucket, key_prefix="prepare-fitness-training-data/code"
+        "prepare_fitness_training_data.py",
+        bucket=bucket,
+        key_prefix="prepare-fitness-training-data/code",
     )
 
     prepare_data_output = f"s3://{bucket}/prepare-fitness-training-data/output/"
@@ -68,17 +70,20 @@ def create_pipeline():
                 output_name="train",
                 destination=prepare_data_output,
                 source="/opt/ml/processing/output/",
-            )],
-        inputs=[ProcessingInput(helpers, "/opt/ml/processing/input"),
-                ProcessingInput(fitness_data_location, "/opt/ml/processing/input/fitness_data")],
+            )
+        ],
+        inputs=[
+            ProcessingInput(helpers, "/opt/ml/processing/input"),
+            ProcessingInput(
+                fitness_data_location, "/opt/ml/processing/input/fitness_data"
+            ),
+        ],
         code=prepare_data_code_location,
     )
 
     # ----- Train model ----- #
     train_data_location = prepare_data_output
-    train_output_location = (
-        f"s3://{bucket}/fitness-train/job-artefacts"  # Model artefacts will be uploaded here
-    )
+    train_output_location = f"s3://{bucket}/fitness-train/job-artefacts"  # Model artefacts will be uploaded here
     local_dependencies = ["logger.py", "helpers.py"]
 
     estimator = Estimator(
@@ -94,14 +99,18 @@ def create_pipeline():
         sagemaker_session=session,
     )
 
-    train_step = TrainingStep(name='train-fitness-model',
-                              estimator=estimator,
-                              inputs={"train": TrainingInput(s3_data=train_data_location)},
-                              depends_on=[prepare_data_step])
+    train_step = TrainingStep(
+        name="train-fitness-model",
+        estimator=estimator,
+        inputs={"train": TrainingInput(s3_data=train_data_location)},
+        depends_on=[prepare_data_step],
+    )
 
     # ----- Create model ----- #
     model_name = f"{config.get('model', 'fitness-model-name')}-{datetime.now().strftime('%Y%m%d')}"
-    code_location = f"s3://{bucket}/fitness-train/Model"  # Code files will be uploaded here
+    code_location = (
+        f"s3://{bucket}/fitness-train/Model"  # Code files will be uploaded here
+    )
 
     model = Model(
         image_uri=estimator.image_uri,
@@ -146,9 +155,11 @@ def create_pipeline():
     )
 
     # Define the pipeline on aws but do not execute (since this process will be executed on a lambda)
-    pipeline = Pipeline(name='strava-fitness-pipeline',
-                        steps=[prepare_data_step, train_step, model_step, deploy_step],
-                        sagemaker_session=session)
+    pipeline = Pipeline(
+        name="strava-fitness-pipeline",
+        steps=[prepare_data_step, train_step, model_step, deploy_step],
+        sagemaker_session=session,
+    )
 
     return pipeline
 
@@ -162,7 +173,6 @@ def save_pipeline_definition(pipeline: Pipeline, save_dir):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--execute-local-instance",
@@ -178,15 +188,19 @@ if __name__ == "__main__":
     save_pipeline_definition(pipeline, save_dir=".")
 
     if execute_local_instance:
-        local_compatible_steps = [v for k,v in pipeline._step_map.items()
-                                  if k not in ("deploy-fitness-model", 'model-step-CreateModel')]
+        local_compatible_steps = [
+            v
+            for k, v in pipeline._step_map.items()
+            if k not in ("deploy-fitness-model", "model-step-CreateModel")
+        ]
 
-        local_pipeline = Pipeline(name="local_pipeline",
-                                  steps=local_compatible_steps,
-                                  sagemaker_session=LocalPipelineSession())
+        local_pipeline = Pipeline(
+            name="local_pipeline",
+            steps=local_compatible_steps,
+            sagemaker_session=LocalPipelineSession(),
+        )
 
-        local_pipeline.upsert(role_arn=role,
-                              description='local pipeline execution')
+        local_pipeline.upsert(role_arn=role, description="local pipeline execution")
         # Start a pipeline execution
         execution = local_pipeline.start()
         print("Local orchestration test complete")
