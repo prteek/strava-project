@@ -4,6 +4,8 @@
 
 ![architecture](./resources/strava.png)
 
+A dashboard for the metrics has been setup at [MLDev](https://mldev.herokuapp.com "MLDev")
+
 This repo contains the code for the Strava activities modelling project. 
 This is a demonstration in using an ML system as part of a larger system that does more than just predictions.  
 In particular this is an attempt at implementing:
