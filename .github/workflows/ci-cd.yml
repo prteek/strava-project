@@ -108,7 +108,7 @@ jobs:
         run: |
           npm install -g aws-cdk
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -Ur requirements.txt
 
       - name: Deploy engineering stack
         run: |
@@ -150,7 +150,7 @@ jobs:
         run: |
           npm install -g aws-cdk
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -Ur requirements.txt
 
       - name: Deploy ml stacks
         run: |
