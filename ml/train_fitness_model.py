@@ -18,6 +18,7 @@ from helpers import (
     dtype_converter,
 )
 from torch import nn
+import torch
 from skorch import NeuralNetRegressor
 
 
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     y = df_train[TARGET].values.astype(np.float32)
 
     logger.info("Training model")
+    torch.manual_seed(42)
     estimator_ = nn.Sequential(
         nn.Linear(3, 50),
         nn.Tanh(),
