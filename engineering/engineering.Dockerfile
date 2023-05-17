@@ -5,4 +5,4 @@ COPY ./predict_suffer_score.py ./
 COPY ./predict_fitness_score.py ./
 
 COPY ./requirements.txt ./
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -Ur requirements.txt
