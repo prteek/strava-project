@@ -22,17 +22,13 @@ matplotlib
 
 #### AWS
 boto3
-sagemaker
+sagemaker==2.156.0
 awswrangler
-sagemaker-training
-sagemaker[local]
 aws-cdk-lib==2.73.0
 constructs>=10.0.0
 
 #### Model serving
 flask
-sagemaker-inference
-multi-model-server
 
 #### Data
 fsspec
