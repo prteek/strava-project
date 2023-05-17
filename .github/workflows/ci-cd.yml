@@ -21,8 +21,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
 
       - name: Execute pipeline as a check on different steps
         run: |
@@ -72,8 +72,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -U sagemaker
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -U sagemaker
 
       - name: Run sagemaker jobs offline
         run: |
@@ -107,8 +107,8 @@ jobs:
       - name: Install CDK and Python dependencies
         run: |
           npm install -g aws-cdk
-          python -m pip install --upgrade pip
-          python -m pip install -Ur requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -Ur requirements.txt
 
       - name: Deploy engineering stack
         run: |
@@ -149,8 +149,8 @@ jobs:
       - name: Install CDK and Python dependencies
         run: |
           npm install -g aws-cdk
-          python -m pip install --upgrade pip
-          python -m pip install -Ur requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -Ur requirements.txt
 
       - name: Deploy ml stacks
         run: |
