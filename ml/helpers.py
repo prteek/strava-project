@@ -162,3 +162,9 @@ class FitnessModel(BaseEstimator, TransformerMixin):
         X_activity = X[self.PREDICTORS_ACTIVITY]
         y_pred_activity = self.activity_model.predict(X_activity)
         return np.c_[y_pred_rest, y_pred_activity]
+
+
+def dtype_converter(X,y=None):
+    """Convert input data to float32 for torch model"""
+    return X.astype(np.float32)
+
