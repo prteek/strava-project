@@ -13,6 +13,8 @@ scipy
 ##### Modelling
 scikit-learn>=1.2
 statsmodels
+torch
+skorch
 joblib
 
 #### Visualisation
