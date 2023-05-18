@@ -88,7 +88,7 @@ if __name__ == "__main__":
         .dropna(subset=["id"])
         .assign(
             time_since_last_update=lambda x: (
-                x["date"].astype("datetime64[s]").diff()
+                x["date"].astype("datetime64[ns]").diff()
             ).dt.days,
             fitness_score_initial=lambda x: x["fitness_score"].shift(1),
         )
