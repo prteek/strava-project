@@ -149,13 +149,14 @@ def ODE(x,y):
     # You should feed the backward function with unit vector in order to access the gradient as a vector.
     dydx, = torch.autograd.grad(y, x,
                                 grad_outputs=torch.ones_like(y),
-                                create_graph=True, # Needed since the ODE function itself is differentiated further making this step twice differentiable
+                                create_graph=True,  # Needed since the ODE function itself is differentiated further
+                                # in training loop making this step twice differentiable
                                 )
 
-    eq = dydx + y  # y' = - 2x*y
-    ic = (model(x_) - y_)**2  # y(x=0) = 1
-    long_range_decay = (model(torch.tensor([[100.0]])) - 0.0)**2  # y(x=100) = 0
-    return torch.mean(ic)*5 + torch.mean(eq**2)*1 + long_range_decay*0
+    eq = dydx + y  # y' = -y
+    ic = (y_ - model(x_))**2  # y = y_true at x = x_true is boundary condition of sorts
+    # long_range_decay = (model(torch.tensor([[10.0]])) - 0.0)**2  # y(x=10) = 0 is another boundary condition
+    return torch.mean(ic)*5 + torch.mean(eq**2)*1
 
 
 loss_func = ODE
