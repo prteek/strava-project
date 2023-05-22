@@ -116,7 +116,7 @@ import numpy as np
 
 # Define the NN model to solve the problem
 class Model(nn.Module):
-    def __init__(self, n_units=10, n_hidden=2):
+    def __init__(self, n_units=20, n_hidden=2):
         super(Model, self).__init__()
         self.lin_in = nn.Linear(1,n_units)
         self.hidden = [nn.Linear(n_units,n_units) for i in range(n_hidden)]
