@@ -48,9 +48,18 @@ model = Model()
 
 mse_loss = torch.nn.MSELoss()
 
-def ODE(X_,y_):
+def ODE(y,y_pred):
     # There is a small precaution in using the gradient with vector input.
     # You should feed the backward function with unit vector in order to access the gradient as a vector.
+
+    # Governing equation constraint
+    days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
+    ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
+    x_fit, x_days = torch.meshgrid(ini_fit, days)
+    x_ss = torch.zeros_like(x_fit, dtype=torch.float32)/10.0
+    x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
+
+    y_ = model(x_data)
     y_fit_pre = y_[:,0]
     y_ini = x_fit
     dydt, = torch.autograd.grad(y_fit_pre, x_days,
@@ -60,26 +69,26 @@ def ODE(X_,y_):
                                 allow_unused=True,
                                 )
 
-    eq = dydt + y_ini/36  # y' = -y
+    eq = dydt + y_ini/36  # y' = -y 36 is learnt from data
 
+    # Boundary Condition (y(t=100) = 0)
     ini_fit_ = torch.arange(5,10, dtype=torch.float32).requires_grad_(False)
     days_ = torch.ones_like(ini_fit_)*100
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
     x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
-    long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=10) = 0 is another boundary condition
+    long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=100) = 0 is another boundary condition
 
+    # Initial Condition (y(t=0) = y_prev)
     ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
     days_ = torch.zeros_like(ini_fit_, dtype=torch.float32)
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
     x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
-
     initial_condition = torch.mean((model(torch.tensor(x_long)) - x_fit_.reshape(-1,1))**2)
 
-    X_dat = torch.tensor(X.values, dtype=torch.float32)
-    y_dat = torch.tensor(y, dtype=torch.float32)
-    return mse_loss(y_dat, model(X_dat)) + torch.mean(eq**2)*10 \
+    # Loss function for data
+    return mse_loss(y, y_pred)*5 + torch.mean(eq**2)*10 \
         + long_range_decay*0 + initial_condition*1
 
 
@@ -89,19 +98,15 @@ loss_func = ODE
 # Define the optimization
 opt = torch.optim.Adam(model.parameters(), lr=0.01)
 
-# Define reference grid
-days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
-ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
-x_fit, x_days = torch.meshgrid(ini_fit, days)
-x_ss = torch.zeros_like(x_fit, dtype=torch.float32)/10.0
-x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
+X_dat = torch.tensor(X.values, dtype=torch.float32)
+y_dat = torch.tensor(y, dtype=torch.float32)
 # Iterative learning
 epochs = 5000
 for epoch in range(epochs):
     torch.random.manual_seed(0)
     opt.zero_grad()
-    y_trial = model(x_data)
-    loss = loss_func(x_data, y_trial)
+    y_trial = model(X_dat)
+    loss = loss_func(y_dat, y_trial)
 
     loss.backward()  # This is where the gradient is calculated wrt the parameters and x values
     opt.step()
@@ -111,20 +116,33 @@ for epoch in range(epochs):
 
 
 
-d = np.arange(10)
+d = np.arange(30)
 ini = np.ones_like(d)*20
 ss = np.ones_like(d)*0
 x = torch.tensor(np.c_[ini, d, ss], dtype=torch.float32)/torch.tensor([1,1,10], dtype=torch.float32)
 plt.plot(d, model(x).data[:,0])
 plt.plot(d, ini*np.exp(-0.028*d))
-# plt.scatter([0,35], [6.2,2.3])
 plt.show()
+
 
 plt.scatter(y[:,0], model(torch.tensor(X.values, dtype=torch.float32)).data[:,0])
 plt.scatter(y[:,1], model(torch.tensor(X.values, dtype=torch.float32)).data[:,1])
 plt.plot([0,10], [0,10])
 plt.show()
 
+y_pre_pred = []
+y_pred = [0.405]
+for i in range(len(X)):
+    X_i = torch.tensor(X.iloc[i,:].values, dtype=torch.float32).reshape(1,-1)
+    X_pld = X_i
+    X_pld[0,0] = torch.tensor(y_pred[i], dtype=torch.float32)
+    y_pre_pred.append(model(X_pld).data.numpy()[0,0])
+    y_pred.append(model(X_pld).data.numpy()[0,1])
+
+
+plt.plot(y_pred[1:])
+plt.plot(y[:,1])
+plt.show()
 
 
 import torch
