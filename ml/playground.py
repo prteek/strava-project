@@ -23,88 +23,107 @@ df_train = (
     .reset_index(drop=True)
 )
 
-X = df_train[PREDICTORS_FITNESS]
+X = df_train[PREDICTORS_FITNESS]/np.array([1,1,10])
 y = df_train[TARGET].values.astype(np.float32)
 
-class NeuralNet(nn.Module):
-    def __init__(self):
-        super(NeuralNet, self).__init__()
-        self.layer1 = nn.Linear(3, 50)
-        self.layer2 = nn.ReLU()
-        self.layer3 = nn.Dropout(0.2)
-        self.layer4 = nn.Linear(50, 50)
-        self.layer5 = nn.ReLU()
-        self.layer6 = nn.Dropout(0.2)
-        self.layer7 = nn.Linear(50, 50)
-        self.layer8 = nn.ReLU()
-        self.layer9 = nn.Dropout(0.2)
-        self.layer10 = nn.Linear(50, 50)
-        self.layer11 = nn.ReLU()
-        self.layer12 = nn.Dropout(0.2)
-        self.layer13 = nn.Linear(50, 50)
-        self.layer14 = nn.ReLU()
-        self.layer15 = nn.Dropout(0.2)
-        self.layer16 = nn.Linear(50, 50)
-        self.layer17 = nn.ReLU()
-        self.layer18 = nn.Linear(50, 2)
+
+class Model(nn.Module):
+    def __init__(self, n_units=20, n_hidden=2):
+        super(Model, self).__init__()
+        self.lin_in = nn.Linear(3,n_units)
+        self.hidden = [nn.Linear(n_units,n_units) for i in range(n_hidden)]
+        self.lin_out = nn.Linear(n_units,2)
 
     def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.layer5(x)
-        x = self.layer6(x)
-        x = self.layer7(x)
-        x = self.layer8(x)
-        x = self.layer9(x)
-        x = self.layer10(x)
-        x = self.layer11(x)
-        x = self.layer12(x)
-        x = self.layer13(x)
-        x = self.layer14(x)
-        x = self.layer15(x)
-        x = self.layer16(x)
-        x = self.layer17(x)
-        x = self.layer18(x)
+        x = torch.relu(self.lin_in(x))
+        for i_hidden in self.hidden:
+            x = torch.relu(i_hidden(x))
+
+        x = self.lin_out(x)
         return x
 
-def __call__(self):
-    for module in self.modules:
-        if hasattr(module, 'weight'):
-            w = module.weight.data
-            w = w.clamp(0.0, None)
-            module.weight.data = w
 
 
-estimator = NeuralNetRegressor(
-    NeuralNet,
-    max_epochs=1000,
-    criterion=nn.MSELoss(),
-    lr=0.01,
-    # Shuffle training data on each epoch
-    iterator_train__shuffle=False,
-)
+model = Model()
 
-model = Pipeline(
-    [
-        ("scaler", StandardScaler()),
-        ("dtype_converter", FT(dtype_converter)),
-        ("estimator", estimator),
-    ]
-)
+mse_loss = torch.nn.MSELoss()
+
+def ODE(X_,y_):
+    # There is a small precaution in using the gradient with vector input.
+    # You should feed the backward function with unit vector in order to access the gradient as a vector.
+    y_fit_pre = y_[:,0]
+    y_ini = x_fit
+    dydt, = torch.autograd.grad(y_fit_pre, x_days,
+                                grad_outputs=torch.ones_like(y_fit_pre),
+                                create_graph=True,  # Needed since the ODE function itself is differentiated further
+                                # in training loop making this step twice differentiable,
+                                allow_unused=True,
+                                )
+
+    eq = dydt + y_ini/36  # y' = -y
+
+    ini_fit_ = torch.arange(5,10, dtype=torch.float32).requires_grad_(False)
+    days_ = torch.ones_like(ini_fit_)*100
+    x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
+    x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
+    long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=10) = 0 is another boundary condition
+
+    ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
+    days_ = torch.zeros_like(ini_fit_, dtype=torch.float32)
+    x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
+    x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
+
+    initial_condition = torch.mean((model(torch.tensor(x_long)) - x_fit_.reshape(-1,1))**2)
+
+    X_dat = torch.tensor(X.values, dtype=torch.float32)
+    y_dat = torch.tensor(y, dtype=torch.float32)
+    return mse_loss(y_dat, model(X_dat)) + torch.mean(eq**2)*10 \
+        + long_range_decay*0 + initial_condition*1
 
 
-model.fit(X,y)
+loss_func = ODE
 
-d = np.arange(100)
-ini = np.ones_like(d)*30
+
+# Define the optimization
+opt = torch.optim.Adam(model.parameters(), lr=0.01)
+
+# Define reference grid
+days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
+ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
+x_fit, x_days = torch.meshgrid(ini_fit, days)
+x_ss = torch.zeros_like(x_fit, dtype=torch.float32)/10.0
+x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
+# Iterative learning
+epochs = 5000
+for epoch in range(epochs):
+    torch.random.manual_seed(0)
+    opt.zero_grad()
+    y_trial = model(x_data)
+    loss = loss_func(x_data, y_trial)
+
+    loss.backward()  # This is where the gradient is calculated wrt the parameters and x values
+    opt.step()
+
+    if epoch % 100 == 0:
+        print('epoch {}, loss {}'.format(epoch, loss.item()))
+
+
+
+d = np.arange(10)
+ini = np.ones_like(d)*20
 ss = np.ones_like(d)*0
-x = pd.DataFrame(np.c_[ini, d, ss], columns=PREDICTORS_FITNESS)
-plt.plot(d, model.predict(x)[:,0])
+x = torch.tensor(np.c_[ini, d, ss], dtype=torch.float32)/torch.tensor([1,1,10], dtype=torch.float32)
+plt.plot(d, model(x).data[:,0])
 plt.plot(d, ini*np.exp(-0.028*d))
 # plt.scatter([0,35], [6.2,2.3])
+plt.show()
 
+plt.scatter(y[:,0], model(torch.tensor(X.values, dtype=torch.float32)).data[:,0])
+plt.scatter(y[:,1], model(torch.tensor(X.values, dtype=torch.float32)).data[:,1])
+plt.plot([0,10], [0,10])
+plt.show()
 
 
 
@@ -192,5 +211,13 @@ plt.plot(x, y.data, label='approx')
 plt.fill_between([x_.data.min(), x_.data.max()], 0,5, label='training range', alpha=0.2)
 plt.legend()
 plt.show()
+
+
+
+#%%
+import torch
+from torch import nn
+
+
 
 
