@@ -32,7 +32,7 @@ def loss_func(y,y_pred):
 
     y_ = model(x_data)
     y_fit_pre = y_[:,0]
-    y_ini = y_[:,1]
+    y_ini = x_data[:,0]  # Value at start before decay
     dy, = torch.autograd.grad(y_fit_pre, x_data,
                               grad_outputs=torch.ones_like(y_fit_pre),
                               create_graph=True,  # Needed since the ODE function itself is differentiated further
