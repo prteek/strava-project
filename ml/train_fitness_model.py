@@ -11,11 +11,56 @@ import numpy as np
 from logger import logger
 from helpers import (
     TARGET_FITNESS as TARGET,
-    ExponentialDecayEstimator,
-    FitnessModel,
+    TorchModel,
     PREDICTORS_FITNESS,
     expected_error,
 )
+import torch
+
+
+def loss_func(y,y_pred):
+    """Compound loss function to apply ODE and boundary conditions to Neural Network"""
+    # There is a small precaution in using the gradient with vector input.
+    # You should feed the backward function with unit vector in order to access the gradient as a vector.
+
+    # Governing equation constraint
+    days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
+    ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
+    x_fit, x_days = torch.meshgrid(ini_fit, days)
+    x_ss = torch.zeros_like(x_fit, dtype=torch.float32)
+    x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
+
+    y_ = model(x_data)
+    y_fit_pre = y_[:,0]
+    y_ini = x_fit
+    dydt, = torch.autograd.grad(y_fit_pre, x_days,
+                                grad_outputs=torch.ones_like(y_fit_pre),
+                                create_graph=True,  # Needed since the ODE function itself is differentiated further
+                                # in training loop making this step twice differentiable,
+                                allow_unused=True,
+                                )
+
+    eq = dydt + y_ini/36  # y' = -y;  36 is learnt from data
+
+    # Boundary Condition (y(t=100) = 0) (Not used for now in final loss)
+    ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
+    days_ = torch.ones_like(ini_fit_)*100
+    x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
+    x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
+    long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=100) = 0 is another boundary condition
+
+    # Initial Condition (y(t=0) = y_prev)
+    ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
+    days_ = torch.zeros_like(ini_fit_, dtype=torch.float32)
+    x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
+    x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
+    initial_condition = torch.mean((model(torch.tensor(x_long)) - x_fit_.reshape(-1,1))**2)
+
+    # Loss function for data
+    return mse_loss(y, y_pred)*5 + torch.mean(eq**2)*10 \
+        + long_range_decay*0 + initial_condition*1
 
 
 if __name__ == "__main__":
@@ -47,41 +92,40 @@ if __name__ == "__main__":
     )
 
     X = df_train[PREDICTORS_FITNESS]
-    y = df_train[TARGET]
+    y = df_train[TARGET].values.astype(np.float32)
 
     logger.info("Training model")
-    rest_model = ExponentialDecayEstimator()
-    activity_model = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            (
-                "estimator",
-                SGDRegressor(
-                    loss="squared_error",
-                    penalty="l2",
-                    alpha=0.01,
-                    max_iter=100,
-                    tol=1e-3,
-                    random_state=42,
-                    eta0=0.1,
-                    verbose=1,
-                ),
-            ),
-        ]
-    )
+    torch.random.manual_seed(0)
 
-    model = FitnessModel(rest_model=rest_model, activity_model=activity_model)
-    model.fit(X, y)
+    model = TorchModel()
+
+    mse_loss = torch.nn.MSELoss()
+    opt = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    y_dat = torch.tensor(y, dtype=torch.float32)
+    # Iterative learning
+    epochs = 10000
+    for epoch in range(epochs):
+        opt.zero_grad()
+        y_pred = model(X)
+        loss = loss_func(y_dat, y_pred)
+
+        loss.backward()  # This is where the gradient is calculated wrt the parameters and x values
+        opt.step()
+
+        if epoch % 100 == 0:
+            print('epoch {}, loss {}'.format(epoch, loss.item()))
+
 
     # Emit the required metrics
-    y_true = y.values[:, 0]
+    y_true = y[:, 0]
     y_pred = model.predict(X)[:, 0]
     rmse = round(np.sqrt(mean_squared_error(y_true, y_pred)))
     print(f"train_rmse: {rmse}")
     print(f"train_mean_error: {round(expected_error(y_true, y_pred))}")
     print(f"train_r2_score: {round(r2_score(y_true, y_pred), 3)}")
 
-    y_true = y.values[:, 1]
+    y_true = y[:, 1]
     y_pred = model.predict(X)[:, 1]
     rmse = round(np.sqrt(mean_squared_error(y_true, y_pred)))
     print(f"train_rmse: {rmse}")

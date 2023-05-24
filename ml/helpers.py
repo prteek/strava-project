@@ -5,6 +5,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.optimize import curve_fit
 from sklearn.utils.validation import check_is_fitted
 import numpy as np
+import torch
+from torch import nn
 
 QUERY_ACTIVITIES = """
 SELECT * FROM strava.activities
@@ -168,3 +170,35 @@ def dtype_converter(X,y=None):
     """Convert input data to float32 for torch model"""
     return X.astype(np.float32)
 
+
+class TorchModel(nn.Module):
+    def __init__(self, n_units=20, n_hidden=2):
+        super(TorchModel, self).__init__()
+        self.lin_in = nn.Linear(3,n_units)
+        self.hidden = [nn.Linear(n_units,n_units) for i in range(n_hidden)]
+        self.lin_out = nn.Linear(n_units,2)
+
+    def forward(self, x):
+        x = self._check_types(x)
+        x = torch.relu(self.lin_in(x))
+        for i_hidden in self.hidden:
+            x = torch.relu(i_hidden(x))
+
+        x = self.lin_out(x)
+        return x
+
+    @staticmethod
+    def _check_types(x):
+        if isinstance(x, np.ndarray):
+            x = torch.tensor(x, dtype=torch.float32)
+        elif isinstance(x, pd.DataFrame):
+            x = torch.tensor(x.values, dtype=torch.float32)
+        elif isinstance(x, torch.Tensor):
+            pass
+        else:
+            raise TypeError(f"Input type {type(x)} not supported")
+        return x
+
+    def predict(self, x):
+        x = self._check_types(x)
+        return self.forward(x).detach().numpy()
