@@ -8,7 +8,7 @@ import flask
 from flask import Flask, Response
 
 # Put the following files in /usr/bin in Docker container
-from helpers import ExponentialDecayEstimator, FitnessModel
+from helpers import TorchModel
 from logger import logger
 
 
