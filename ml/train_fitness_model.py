@@ -24,22 +24,22 @@ def loss_func(y,y_pred):
     # You should feed the backward function with unit vector in order to access the gradient as a vector.
 
     # Governing equation constraint
-    days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
-    ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
+    days = torch.arange(1,11, dtype=torch.float32).requires_grad_(True)
+    ini_fit = torch.arange(5,21, dtype=torch.float32).requires_grad_(True)
     x_fit, x_days = torch.meshgrid(ini_fit, days)
     x_ss = torch.zeros_like(x_fit, dtype=torch.float32)
     x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
 
     y_ = model(x_data)
     y_fit_pre = y_[:,0]
-    y_ini = x_fit
-    dydt, = torch.autograd.grad(y_fit_pre, x_days,
-                                grad_outputs=torch.ones_like(y_fit_pre),
-                                create_graph=True,  # Needed since the ODE function itself is differentiated further
-                                # in training loop making this step twice differentiable,
-                                allow_unused=True,
-                                )
-
+    y_ini = y_[:,1]
+    dy, = torch.autograd.grad(y_fit_pre, x_data,
+                              grad_outputs=torch.ones_like(y_fit_pre),
+                              create_graph=True,  # Needed since the ODE function itself is differentiated further
+                              # in training loop making this step twice differentiable,
+                              allow_unused=False,
+                              )
+    dydt = dy[:,1]
     eq = dydt + y_ini/36  # y' = -y;  36 is learnt from data
 
     # Boundary Condition (y(t=100) = 0) (Not used for now in final loss)
@@ -48,7 +48,7 @@ def loss_func(y,y_pred):
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
     x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
-    long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=100) = 0 is another boundary condition
+    long_range_decay = torch.mean((model(x_long))**2) # y(x=100) = 0 is another boundary condition
 
     # Initial Condition (y(t=0) = y_prev)
     ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
@@ -56,11 +56,19 @@ def loss_func(y,y_pred):
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
     x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
-    initial_condition = torch.mean((model(torch.tensor(x_long)) - x_fit_.reshape(-1,1))**2)
+    initial_condition = torch.mean((model(x_long) - x_fit_.reshape(-1,1))**2)
 
+    # Boundary condition (y(ss=0) = y_pre)
+    ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
+    days_ = torch.arange(1,10, dtype=torch.float32).requires_grad_(False)
+    x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
+    x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
+    y_out = model(x_long)
+    boundary_condition = torch.mean((y_out[:,0] - y_out[:,1])**2)
     # Loss function for data
-    return mse_loss(y, y_pred)*5 + torch.mean(eq**2)*10 \
-        + long_range_decay*0 + initial_condition*1
+    return mse_loss(y, y_pred)*10 + torch.mean(eq**2)*5 \
+        + long_range_decay*1 + initial_condition*1 + boundary_condition*1
 
 
 if __name__ == "__main__":
