@@ -23,7 +23,7 @@ df_train = (
     .reset_index(drop=True)
 )
 
-X = df_train[PREDICTORS_FITNESS]#/np.array([1,1,10])
+X = df_train[PREDICTORS_FITNESS]
 y = df_train[TARGET].values.astype(np.float32)
 
 
@@ -35,12 +35,26 @@ class Model(nn.Module):
         self.lin_out = nn.Linear(n_units,2)
 
     def forward(self, x):
+        x = self._check_types(x)
         x = torch.relu(self.lin_in(x))
         for i_hidden in self.hidden:
             x = torch.relu(i_hidden(x))
 
         x = self.lin_out(x)
         return x
+
+    @staticmethod
+    def _check_types(x):
+        if isinstance(x, np.ndarray):
+            x = torch.tensor(x, dtype=torch.float32)
+        elif isinstance(x, pd.DataFrame):
+            x = torch.tensor(x.values, dtype=torch.float32)
+        elif isinstance(x, torch.Tensor):
+            pass
+        else:
+            raise TypeError(f"Input type {type(x)} not supported")
+        return x
+
 
 
 
@@ -97,14 +111,13 @@ def loss_func(y,y_pred):
 # Define the optimization
 opt = torch.optim.Adam(model.parameters(), lr=0.01)
 
-X_dat = torch.tensor(X.values, dtype=torch.float32)
 y_dat = torch.tensor(y, dtype=torch.float32)
 # Iterative learning
-epochs = 5000
+epochs = 10000
 for epoch in range(epochs):
     torch.random.manual_seed(0)
     opt.zero_grad()
-    y_pred = model(X_dat)
+    y_pred = model(X)
     loss = loss_func(y_dat, y_pred)
 
     loss.backward()  # This is where the gradient is calculated wrt the parameters and x values
@@ -114,27 +127,27 @@ for epoch in range(epochs):
         print('epoch {}, loss {}'.format(epoch, loss.item()))
 
 
-
+# Plot the results
 d = np.arange(30)
-ini = np.ones_like(d)*20
+ini = np.ones_like(d)*15
 ss = np.ones_like(d)*0
-x = torch.tensor(np.c_[ini, d, ss], dtype=torch.float32)/torch.tensor([1,1,10], dtype=torch.float32)
+x = np.c_[ini, d, ss]
 plt.plot(d, model(x).data[:,0])
-plt.plot(d, ini*np.exp(-0.028*d))
+plt.plot(d, ini*np.exp(-d/36))
 plt.show()
 
 
-plt.scatter(y[:,0], model(torch.tensor(X.values, dtype=torch.float32)).data[:,0])
-plt.scatter(y[:,1], model(torch.tensor(X.values, dtype=torch.float32)).data[:,1])
+plt.scatter(y[:,0], model(X).data[:,0])
+plt.scatter(y[:,1], model(X).data[:,1])
 plt.plot([0,10], [0,10])
 plt.show()
 
 y_pre_pred = []
 y_pred = [0.405]
 for i in range(len(X)):
-    X_i = torch.tensor(X.iloc[i,:].values, dtype=torch.float32).reshape(1,-1)
+    X_i = X.iloc[i,:].values.reshape(1,-1)
     X_pld = X_i
-    X_pld[0,0] = torch.tensor(y_pred[i], dtype=torch.float32)
+    X_pld[0,0] = y_pred[i]
     y_pre_pred.append(model(X_pld).data.numpy()[0,0])
     y_pred.append(model(X_pld).data.numpy()[0,1])
 
