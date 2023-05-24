@@ -23,7 +23,7 @@ df_train = (
     .reset_index(drop=True)
 )
 
-X = df_train[PREDICTORS_FITNESS]/np.array([1,1,10])
+X = df_train[PREDICTORS_FITNESS]#/np.array([1,1,10])
 y = df_train[TARGET].values.astype(np.float32)
 
 
@@ -48,7 +48,9 @@ model = Model()
 
 mse_loss = torch.nn.MSELoss()
 
-def ODE(y,y_pred):
+
+def loss_func(y,y_pred):
+    """Compound loss function to apply ODE and boundary conditions to Neural Network"""
     # There is a small precaution in using the gradient with vector input.
     # You should feed the backward function with unit vector in order to access the gradient as a vector.
 
@@ -56,7 +58,7 @@ def ODE(y,y_pred):
     days = torch.arange(1,10, dtype=torch.float32).requires_grad_(True)
     ini_fit = torch.arange(5,20, dtype=torch.float32).requires_grad_(True)
     x_fit, x_days = torch.meshgrid(ini_fit, days)
-    x_ss = torch.zeros_like(x_fit, dtype=torch.float32)/10.0
+    x_ss = torch.zeros_like(x_fit, dtype=torch.float32)
     x_data = torch.concat([x_fit.reshape(-1,1), x_days.reshape(-1,1), x_ss.reshape(-1,1)], dim=1)
 
     y_ = model(x_data)
@@ -69,13 +71,13 @@ def ODE(y,y_pred):
                                 allow_unused=True,
                                 )
 
-    eq = dydt + y_ini/36  # y' = -y 36 is learnt from data
+    eq = dydt + y_ini/36  # y' = -y;  36 is learnt from data
 
-    # Boundary Condition (y(t=100) = 0)
+    # Boundary Condition (y(t=100) = 0) (Not used for now in final loss)
     ini_fit_ = torch.arange(5,10, dtype=torch.float32).requires_grad_(False)
     days_ = torch.ones_like(ini_fit_)*100
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
-    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
     long_range_decay = torch.mean((model(torch.tensor(x_long)))**2) # y(x=100) = 0 is another boundary condition
 
@@ -83,16 +85,13 @@ def ODE(y,y_pred):
     ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
     days_ = torch.zeros_like(ini_fit_, dtype=torch.float32)
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
-    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)/10.0
+    x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
     x_long = torch.concat([x_fit_.reshape(-1,1), x_days_.reshape(-1,1), x_ss_.reshape(-1,1)], dim=1)
     initial_condition = torch.mean((model(torch.tensor(x_long)) - x_fit_.reshape(-1,1))**2)
 
     # Loss function for data
     return mse_loss(y, y_pred)*5 + torch.mean(eq**2)*10 \
         + long_range_decay*0 + initial_condition*1
-
-
-loss_func = ODE
 
 
 # Define the optimization
@@ -105,8 +104,8 @@ epochs = 5000
 for epoch in range(epochs):
     torch.random.manual_seed(0)
     opt.zero_grad()
-    y_trial = model(X_dat)
-    loss = loss_func(y_dat, y_trial)
+    y_pred = model(X_dat)
+    loss = loss_func(y_dat, y_pred)
 
     loss.backward()  # This is where the gradient is calculated wrt the parameters and x values
     opt.step()
@@ -140,8 +139,10 @@ for i in range(len(X)):
     y_pred.append(model(X_pld).data.numpy()[0,1])
 
 
-plt.plot(y_pred[1:])
-plt.plot(y[:,1])
+t = df_train['start_timestamp'].astype("datetime64[ns]").tolist()
+plt.plot(t, y_pred[1:])
+plt.plot(t, y[:,1])
+plt.xticks(rotation=90)
 plt.show()
 
 
