@@ -29,9 +29,9 @@ X = df_train[PREDICTORS_FITNESS]
 y = df_train[TARGET].values.astype(np.float32)
 
 
-class Model(nn.Module):
+class TorchModel(nn.Module):
     def __init__(self, n_units=20, n_hidden=2):
-        super(Model, self).__init__()
+        super(TorchModel, self).__init__()
         self.lin_in = nn.Linear(3,n_units)
         self.hidden = [nn.Linear(n_units,n_units) for i in range(n_hidden)]
         self.lin_out = nn.Linear(n_units,2)
@@ -57,10 +57,13 @@ class Model(nn.Module):
             raise TypeError(f"Input type {type(x)} not supported")
         return x
 
+    def predict(self, x):
+        x = self._check_types(x)
+        return self.forward(x).detach().numpy()
 
 
 
-model = Model()
+model = TorchModel()
 
 mse_loss = torch.nn.MSELoss()
 
@@ -79,7 +82,7 @@ def loss_func(y,y_pred):
 
     y_ = model(x_data)
     y_fit_pre = y_[:,0]
-    y_ini = y_[:,1]
+    y_ini = x_data[:,0]
     dy, = torch.autograd.grad(y_fit_pre, x_data,
                                 grad_outputs=torch.ones_like(y_fit_pre),
                                 create_graph=True,  # Needed since the ODE function itself is differentiated further
@@ -114,7 +117,7 @@ def loss_func(y,y_pred):
     y_out = model(x_long)
     boundary_condition = torch.mean((y_out[:,0] - y_out[:,1])**2)
     # Loss function for data
-    return mse_loss(y, y_pred)*10 + torch.mean(eq**2)*5 \
+    return mse_loss(y, y_pred)*10 + torch.mean(eq**2)*10 \
         + long_range_decay*1 + initial_condition*1 + boundary_condition*1
 
 
@@ -138,7 +141,7 @@ for epoch in range(epochs):
 
 # Plot the results
 d = np.arange(100)
-ini = np.ones_like(d)*10
+ini = np.ones_like(d)*20
 ss = np.ones_like(d)*0
 x = np.c_[ini, d, ss]
 plt.plot(d, model(x).data[:,0])
