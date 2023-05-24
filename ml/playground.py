@@ -15,6 +15,8 @@ from skorch import NeuralNetRegressor
 import os
 
 os.environ["AWS_PROFILE"] = "personal"
+torch.random.manual_seed(0)
+
 
 training_dir = "./data"
 df_train = (
@@ -88,7 +90,7 @@ def loss_func(y,y_pred):
     eq = dydt + y_ini/36  # y' = -y;  36 is learnt from data
 
     # Boundary Condition (y(t=100) = 0) (Not used for now in final loss)
-    ini_fit_ = torch.arange(5,10, dtype=torch.float32).requires_grad_(False)
+    ini_fit_ = torch.arange(5,20, dtype=torch.float32).requires_grad_(False)
     days_ = torch.ones_like(ini_fit_)*100
     x_fit_, x_days_ = torch.meshgrid(ini_fit_, days_)
     x_ss_ = torch.zeros_like(x_fit_, dtype=torch.float32)
@@ -109,13 +111,12 @@ def loss_func(y,y_pred):
 
 
 # Define the optimization
-opt = torch.optim.Adam(model.parameters(), lr=0.01)
+opt = torch.optim.Adam(model.parameters(), lr=0.001)
 
 y_dat = torch.tensor(y, dtype=torch.float32)
 # Iterative learning
 epochs = 10000
 for epoch in range(epochs):
-    torch.random.manual_seed(0)
     opt.zero_grad()
     y_pred = model(X)
     loss = loss_func(y_dat, y_pred)
