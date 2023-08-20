@@ -151,29 +151,7 @@ def handler(event, context=None):
                         .assign(start_date=lambda x: x["start_timestamp"].dt.date)
                         )
 
-        wr.s3.to_csv(
-            df=df_activities,
-            path="s3://pp-strava-data/activities/metadata",
-            index=False,
-            dataset=True,
-            mode="overwrite_partitions",
-            partition_cols=["start_date"],
-            database="strava",
-            table="activities",
-            boto3_session=boto3_session,
-        )
-
-        wr.s3.to_csv(
-            df=df_streams,
-            path="s3://pp-strava-data/activities/streams",
-            index=False,
-            dataset=True,
-            mode="overwrite_partitions",
-            partition_cols=["activity_id"],
-            database="strava",
-            table="streams",
-            boto3_session=boto3_session,
-        )
+        df_activities.to_csv('/dbfs/user/hive/warehouse/activities.csv', index=False)
 
         activity_ids = [{"activity_id": i} for i in df_activities["id"].tolist()]
 
@@ -181,3 +159,9 @@ def handler(event, context=None):
             "statusCode": 200,
             "body": json.dumps(activity_ids),
         }
+
+
+if __name__ == "__main__":
+    event = {'start_date': '2023-08-01'}
+    out = handler(event)
+    print(out)
