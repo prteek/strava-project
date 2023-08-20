@@ -162,6 +162,6 @@ def handler(event, context=None):
 
 
 if __name__ == "__main__":
-    event = {'start_date': '2023-08-01'}
-    out = handler(event)
+    event = {'start_date': '2023-01-01'}
+    out = handler({})
     print(out)
