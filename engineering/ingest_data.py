@@ -19,5 +19,5 @@ display(df)
 
 # Create a table
 permanent_table_name = "activities"
+df.write.saveAsTable(permanent_table_name, mode='append')
 
-df.write.format("parquet").saveAsTable(permanent_table_name)
